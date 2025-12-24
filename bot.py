@@ -1,40 +1,90 @@
-import telebot
-import docker
 import os
-import threading
-import time
+import asyncio
+import httpx
+from tenacity import retry, stop_after_attempt, wait_fixed
+from telegram import Bot
+from telegram.error import TelegramError
 
-# Telegram Bot Configuration
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
-CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+# --- Configuration ---
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
+CHAT_ID = os.environ.get("CHAT_ID")
+OPENHANDS_API_URL = os.environ.get("OPENHANDS_API_URL", "http://host.docker.internal:3000")
+POLL_INTERVAL = 5  # seconds
 
-# Docker Configuration
-CONTAINER_NAME = "openhands-app"
+# --- State ---
+conversation_states = {}
 
-bot = telebot.TeleBot(BOT_TOKEN)
+# --- Telegram Bot Initialization ---
+bot = Bot(token=TELEGRAM_TOKEN)
 
-def monitor_logs():
-    client = docker.from_env()
-    while True:
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
+async def send_telegram_message(message: str):
+    """Sends a message to the configured Telegram chat."""
+    try:
+        await bot.send_message(chat_id=CHAT_ID, text=message)
+    except TelegramError as e:
+        print(f"Error sending Telegram message: {e}")
+        raise
+
+async def fetch_conversations():
+    """Fetches all conversations from the OpenHands API."""
+    async with httpx.AsyncClient() as client:
         try:
-            container = client.containers.get(CONTAINER_NAME)
-            for line in container.logs(stream=True, follow=True):
-                log_line = line.decode("utf-8").strip()
-                if "ERROR" in log_line:
-                    bot.send_message(CHAT_ID, f"Error detected in {CONTAINER_NAME}: {log_line}")
-        except docker.errors.NotFound:
-            print(f"Container {CONTAINER_NAME} not found. Retrying in 60 seconds.")
-            time.sleep(60)
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            time.sleep(60)
+            response = await client.get(f"{OPENHANDS_API_URL}/api/conversations")
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            print(f"HTTP error fetching conversations: {e}")
+        except httpx.RequestError as e:
+            print(f"Request error fetching conversations: {e}")
+        return None
 
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    bot.reply_to(message, "Howdy, how are you doing?")
+async def poll_and_notify():
+    """The main polling loop to check for conversation state changes."""
+    global conversation_states
+    print("Starting polling loop...")
+
+    while True:
+        await asyncio.sleep(POLL_INTERVAL)
+        conversations = await fetch_conversations()
+        if not conversations:
+            continue
+
+        current_ids = set()
+        for conv in conversations:
+            conv_id = conv["id"]
+            title = conv.get("title", "Untitled")
+            status = conv.get("status", "UNKNOWN")
+            current_ids.add(conv_id)
+
+            if conv_id not in conversation_states:
+                # New conversation
+                message = f"🆕 New Task Started: {title} (ID: {conv_id})"
+                await send_telegram_message(message)
+                conversation_states[conv_id] = status
+            elif conversation_states[conv_id] != status:
+                # Status change
+                message = f"🔄 Task Status Update: {title} is now {status}."
+                await send_telegram_message(message)
+                conversation_states[conv_id] = status
+
+        # Clean up old conversations
+        for conv_id in list(conversation_states.keys()):
+            if conv_id not in current_ids:
+                del conversation_states[conv_id]
+
+async def main():
+    """Initializes and runs the bot."""
+    if not all([TELEGRAM_TOKEN, CHAT_ID]):
+        raise ValueError("TELEGRAM_TOKEN and CHAT_ID environment variables must be set.")
+    
+    await send_telegram_message("🤖 OpenHands Monitor Bot is online and starting to poll.")
+    await poll_and_notify()
 
 if __name__ == "__main__":
-    log_thread = threading.Thread(target=monitor_logs)
-    log_thread.daemon = True
-    log_thread.start()
-    bot.polling()
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        print("Bot shutting down.")
+    except ValueError as e:
+        print(f"Configuration error: {e}")

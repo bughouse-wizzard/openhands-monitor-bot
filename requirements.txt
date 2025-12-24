@@ -1,2 +1,4 @@
-telebot
-docker
+python-telegram-bot
+httpx
+tenacity
+asyncio
