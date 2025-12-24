@@ -1,10 +1,10 @@
 services:
-  openhands-monitor-bot:
+  bot:
     build: .
     container_name: openhands-monitor-bot
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
-      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
-      - CHAT_ID=${CHAT_ID}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID}
       - CONTAINER_NAME=openhands-app

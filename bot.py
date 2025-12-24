@@ -1,29 +1,40 @@
-import os
+import telebot
 import docker
-import telegram
-from telegram.ext import Updater, CommandHandler
+import os
+import threading
+import time
 
-TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
-CHAT_ID = os.environ.get('CHAT_ID')
-CONTAINER_NAME = os.environ.get('CONTAINER_NAME')
+# Telegram Bot Configuration
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+# Docker Configuration
+CONTAINER_NAME = "openhands-app"
 
-def main():
-    updater = Updater(token=TELEGRAM_TOKEN, use_context=True)
-    dispatcher = updater.dispatcher
-    start_handler = CommandHandler('start', start)
-    dispatcher.add_handler(start_handler)
-    updater.start_polling()
+bot = telebot.TeleBot(BOT_TOKEN)
 
+def monitor_logs():
     client = docker.from_env()
-    container = client.containers.get(CONTAINER_NAME)
+    while True:
+        try:
+            container = client.containers.get(CONTAINER_NAME)
+            for line in container.logs(stream=True, follow=True):
+                log_line = line.decode("utf-8").strip()
+                if "ERROR" in log_line:
+                    bot.send_message(CHAT_ID, f"Error detected in {CONTAINER_NAME}: {log_line}")
+        except docker.errors.NotFound:
+            print(f"Container {CONTAINER_NAME} not found. Retrying in 60 seconds.")
+            time.sleep(60)
+        except Exception as e:
+            print(f"An error occurred: {e}")
+            time.sleep(60)
 
-    for line in container.logs(stream=True):
-        log_line = line.decode('utf-8').strip()
-        if "AgentStateChanged" in log_line or "ERROR" in log_line or "Action" in log_line:
-            updater.bot.send_message(chat_id=CHAT_ID, text=log_line)
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, "Howdy, how are you doing?")
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    log_thread = threading.Thread(target=monitor_logs)
+    log_thread.daemon = True
+    log_thread.start()
+    bot.polling()
