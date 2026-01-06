@@ -108,9 +108,17 @@ openhands-monitor-bot/
 
 #### 2. Map Maker Module (`map_maker.py`)
 Вспомогательный модуль для работы со словарями:
-- Получение определений слов
-- Поддержка пользовательских словарей
-- Обработка различных форматов входных данных
+- **Основная функция**: `get_definitions(word, custom_dict)` - получение определений слов
+- **Стандартный словарь**: Встроенный словарь с определениями общих терминов
+- **Поддержка пользовательских словарей**: Возможность использования внешних словарей
+- **Нормализация ввода**: Автоматическая обработка регистра и пробелов
+- **Гибкий поиск**: Приоритет пользовательских словарей над стандартными
+- **Обработка ошибок**: Корректная работа с пустыми строками и отсутствующими словами
+
+**Структура файла `map_maker.py`:**
+- `STANDARD_DICTIONARY`: Константа со стандартным словарем
+- `get_definitions()`: Основная публичная функция
+- Документация на русском языке с примерами использования
 
 #### 3. Тесты (`test_map_maker.py`)
 Комплексные тесты для модуля `map_maker.py`, покрывающие:
@@ -147,7 +155,7 @@ from map_maker import get_definitions
 
 # Использование стандартного словаря
 definitions = get_definitions("apple")
-print(definitions)  # ['A fruit that grows on trees', 'A technology company']
+print(definitions)  # ['A fruit that grows on trees', 'A technology company founded by Steve Jobs']
 
 # Использование пользовательского словаря
 custom_dict = {
@@ -157,6 +165,96 @@ custom_dict = {
 definitions = get_definitions("python", custom_dict)
 print(definitions)  # ['Мой любимый язык программирования']
 ```
+
+### 📚 Детальная документация функции `get_definitions()`
+
+Функция `get_definitions()` является основной функцией модуля `map_maker.py` и предоставляет гибкий механизм для получения определений слов из различных источников.
+
+#### Сигнатура функции
+```python
+def get_definitions(word: str, custom_dict: dict = None) -> list:
+```
+
+#### Параметры
+- **`word`** (`str`): Слово для поиска определений. Обязательный параметр.
+- **`custom_dict`** (`dict`, optional): Пользовательский словарь, где ключи - слова (строки), а значения - списки определений. Если не указан, используется стандартный словарь.
+
+#### Возвращаемое значение
+- **`list`**: Список строк с определениями слова. Если слово не найдено в словарях, возвращается пустой список `[]`.
+
+#### Особенности работы
+1. **Нормализация ввода**: Функция автоматически нормализует входное слово:
+   - Приводит к нижнему регистру
+   - Удаляет лишние пробелы с начала и конца
+   - Пример: `"  Apple  "` → `"apple"`
+
+2. **Приоритет поиска**: Если указан `custom_dict`, поиск выполняется сначала в пользовательском словаре, затем в стандартном.
+
+3. **Стандартный словарь**: Включает предопределенные слова с их значениями:
+   - `"apple"`: ["A fruit that grows on trees", "A technology company founded by Steve Jobs"]
+   - `"python"`: ["A high-level programming language", "A large constricting snake"]
+   - `"openhands"`: ["A platform for AI development and collaboration"]
+   - `"test"`: ["A procedure intended to establish the quality...", "An examination of someone's knowledge..."]
+   - `"hello"`: ["A greeting or expression of goodwill", "Used to attract attention"]
+   - `"world"`: ["The earth, together with all of its countries...", "A particular region or group of countries"]
+
+#### Примеры использования
+
+**Базовый пример:**
+```python
+from map_maker import get_definitions
+
+# Получение определений из стандартного словаря
+result = get_definitions("python")
+print(result)
+# Output: ['A high-level programming language', 'A large constricting snake']
+```
+
+**С пользовательским словарем:**
+```python
+custom_dict = {
+    "docker": ["Контейнеризация приложений", "Платформа для разработки"],
+    "kubernetes": ["Оркестратор контейнеров", "Система управления кластерами"]
+}
+
+result = get_definitions("docker", custom_dict)
+print(result)
+# Output: ['Контейнеризация приложений', 'Платформа для разработки']
+```
+
+**Обработка отсутствующих слов:**
+```python
+result = get_definitions("nonexistentword")
+print(result)
+# Output: []
+```
+
+**Работа с различными форматами ввода:**
+```python
+# Разные регистры и пробелы
+print(get_definitions("  APPLE  "))  # ['A fruit that grows on trees', 'A technology company...']
+print(get_definitions("Python"))     # ['A high-level programming language', 'A large constricting snake']
+print(get_definitions("HELLO"))      # ['A greeting or expression of goodwill', 'Used to attract attention']
+```
+
+#### Обработка ошибок
+Функция корректно обрабатывает различные сценарии:
+- **Пустая строка**: `get_definitions("")` → `[]`
+- **Только пробелы**: `get_definitions("   ")` → `[]`
+- **Нестроковые аргументы**: Вызовет ошибку времени выполнения
+
+#### Расширение функциональности
+Для расширения словаря можно:
+1. **Использовать пользовательский словарь**: Передавать свой словарь как параметр
+2. **Модифицировать стандартный словарь**: Изменить переменную `STANDARD_DICTIONARY` в файле `map_maker.py`
+3. **Создать производный модуль**: Наследоваться от существующего функционала
+
+#### Интеграция с другими компонентами
+Функция `get_definitions()` может использоваться в различных сценариях:
+- **Обогащение данных**: Добавление определений к ключевым словам
+- **Поисковая система**: Поиск по определениям слов
+- **Образовательные приложения**: Создание словарей и учебных материалов
+- **Анализ текста**: Извлечение и классификация терминов
 
 ## 🧪 Тестирование
 
