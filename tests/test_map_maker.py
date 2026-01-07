@@ -321,6 +321,82 @@ class TestGetDefinitions:
         
         result = get_definitions("tuple_value", custom_dict)
         assert result == [("элемент1", "элемент2")]
+    
+    def test_return_copy_not_reference(self):
+        """Тест, что функция возвращает копию списка, а не ссылку."""
+        custom_dict = {
+            "test_word": ["Определение 1", "Определение 2"]
+        }
+        
+        result = get_definitions("test_word", custom_dict)
+        
+        # Проверяем, что это копия, а не ссылка
+        assert result == ["Определение 1", "Определение 2"]
+        
+        # Модифицируем результат
+        result.append("Определение 3")
+        
+        # Проверяем, что оригинальный словарь не изменился
+        assert custom_dict["test_word"] == ["Определение 1", "Определение 2"]
+        assert "Определение 3" not in custom_dict["test_word"]
+    
+    def test_dict_with_none_values(self):
+        """Тест словаря со значениями None."""
+        custom_dict = {
+            "word1": None,
+            "word2": [None],
+            "word3": ["Определение", None]
+        }
+        
+        result = get_definitions("word1", custom_dict)
+        assert result == [None]
+        
+        result = get_definitions("word2", custom_dict)
+        assert result == [None]
+        
+        result = get_definitions("word3", custom_dict)
+        assert result == ["Определение", None]
+    
+    def test_complex_normalization(self):
+        """Тест сложных случаев нормализации."""
+        # Разные виды пробелов и управляющих символов
+        test_cases = [
+            ("  apple\t", "apple"),  # табуляция
+            ("apple\n", "apple"),    # перенос строки
+            ("\r\napple\r\n", "apple"),  # Windows-style перенос
+            ("\t\t  apple  \t\n", "apple"),  # смесь символов
+        ]
+        
+        for input_word, expected_normalized in test_cases:
+            # Создаем словарь с нормализованным словом
+            custom_dict = {expected_normalized: [f"Определение для {expected_normalized}"]}
+            
+            result = get_definitions(input_word, custom_dict)
+            assert result == [f"Определение для {expected_normalized}"]
+    
+    def test_nested_structures_in_definitions(self):
+        """Тест вложенных структур в определениях."""
+        custom_dict = {
+            "complex_word": [
+                {"nested": "dict"},
+                ["list", "inside", "list"],
+                {"mixed": ["list", "in", "dict"]}
+            ]
+        }
+        
+        result = get_definitions("complex_word", custom_dict)
+        expected = [
+            {"nested": "dict"},
+            ["list", "inside", "list"],
+            {"mixed": ["list", "in", "dict"]}
+        ]
+        
+        assert result == expected
+        # Функция возвращает копию списка, но не делает глубокую копию вложенных структур
+        # Это ожидаемое поведение, так как используется list() для копирования списка
+        # Проверяем, что список скопирован, но вложенные структуры могут быть ссылками
+        assert result is not custom_dict["complex_word"]  # Список скопирован
+        # Вложенные структуры могут быть теми же объектами (это нормально для list())
 
 
 if __name__ == "__main__":
