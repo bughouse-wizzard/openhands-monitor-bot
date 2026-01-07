@@ -9,7 +9,7 @@ from telegram.error import TelegramError
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 CHAT_ID = os.environ.get("CHAT_ID")
 OPENHANDS_API_URL = os.environ.get("OPENHANDS_API_URL", "http://host.docker.internal:3000")
-POLL_INTERVAL = 5  # seconds
+POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "5"))  # seconds
 
 # --- State ---
 conversation_states = {}
