@@ -2,7 +2,7 @@
 
 Мониторинг задач OpenHands в реальном времени с уведомлениями в Telegram.
 
-## 📋 Обзор проекта
+## 📋 Общее описание
 
 OpenHands Monitor Bot - это система мониторинга, которая отслеживает статус задач (conversations) в OpenHands API и отправляет уведомления в Telegram о новых задачах и изменениях их статуса.
 
@@ -13,194 +13,320 @@ OpenHands Monitor Bot - это система мониторинга, котор
 - **Контейнеризация**: Готовая Docker-конфигурация для простого развертывания
 - **Модуль словаря**: Дополнительный модуль для работы с определениями слов
 
-## 🚀 Быстрый старт
+### Архитектура проекта
+Проект состоит из двух основных компонентов:
+1. **Основной бот мониторинга** (`bot.py`) - отслеживает задачи OpenHands и отправляет уведомления
+2. **Модуль словаря** (`map_maker.py`) - предоставляет функционал для работы с определениями слов
+
+## 📦 Установка
 
 ### Предварительные требования
-- Python 3.11+
-- Docker и Docker Compose (опционально)
-- Telegram Bot Token и Chat ID
+- **Python 3.11+** (для локальной установки)
+- **Docker и Docker Compose** (для контейнеризованной установки)
+- **Telegram Bot Token** и **Chat ID**
+- **Доступ к OpenHands API** (локальный или удаленный)
 
-### Установка
+### Установка через Docker (рекомендуется)
 
-#### Способ 1: Установка через Docker (рекомендуется)
-
-1. Клонируйте репозиторий:
+#### Шаг 1: Клонирование репозитория
 ```bash
 git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
 cd openhands-monitor-bot
 ```
 
-2. Создайте файл `.env` с вашими настройками:
+#### Шаг 2: Настройка переменных окружения
+Создайте файл `.env` в корневой директории проекта:
 ```bash
+# .env файл
 TELEGRAM_TOKEN=your_telegram_bot_token_here
 CHAT_ID=your_telegram_chat_id_here
+OPENHANDS_API_URL=http://localhost:3000  # URL вашего OpenHands API
 ```
 
-3. Запустите через Docker Compose:
+#### Шаг 3: Запуск через Docker Compose
 ```bash
 docker-compose up -d
 ```
 
-#### Способ 2: Установка через Python
+#### Шаг 4: Проверка работы
+```bash
+docker ps | grep openhands-monitor
+docker logs openhands-monitor
+```
 
-1. Установите зависимости:
+### Установка через Python (локальная)
+
+#### Шаг 1: Клонирование и настройка окружения
+```bash
+git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
+cd openhands-monitor-bot
+python -m venv venv
+source venv/bin/activate  # На Windows: venv\Scripts\activate
+```
+
+#### Шаг 2: Установка зависимостей
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Установите переменные окружения:
+#### Шаг 3: Настройка переменных окружения
 ```bash
+# Linux/macOS
 export TELEGRAM_TOKEN="your_telegram_bot_token_here"
 export CHAT_ID="your_telegram_chat_id_here"
-export OPENHANDS_API_URL="http://localhost:3000"  # URL вашего OpenHands API
+export OPENHANDS_API_URL="http://localhost:3000"
+
+# Windows (PowerShell)
+$env:TELEGRAM_TOKEN="your_telegram_bot_token_here"
+$env:CHAT_ID="your_telegram_chat_id_here"
+$env:OPENHANDS_API_URL="http://localhost:3000"
 ```
 
-3. Запустите бота:
+#### Шаг 4: Запуск бота
 ```bash
 python bot.py
 ```
 
-## ⚙️ Конфигурация
+## 🚀 Использование
 
-### Переменные окружения
+### Запуск и работа бота
 
-| Переменная | Описание | Значение по умолчанию |
-|------------|----------|----------------------|
-| `TELEGRAM_TOKEN` | Токен вашего Telegram бота | **Обязательно** |
-| `CHAT_ID` | ID чата для отправки уведомлений | **Обязательно** |
-| `OPENHANDS_API_URL` | URL OpenHands API | `http://host.docker.internal:3000` |
-| `POLL_INTERVAL` | Интервал опроса API (секунды) | `5` |
-
-### Получение Telegram Bot Token
-1. Откройте Telegram и найдите @BotFather
-2. Создайте нового бота с помощью команды `/newbot`
-3. Сохраните полученный токен
-
-### Получение Chat ID
-1. Добавьте бота в нужный чат
-2. Отправьте любое сообщение боту
-3. Перейдите по ссылке: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
-4. Найдите `chat.id` в ответе JSON
-
-## 🏗️ Архитектура проекта
-
-### Структура файлов
-```
-openhands-monitor-bot/
-├── bot.py                    # Основной файл бота
-├── map_maker.py              # Модуль для работы с определениями слов
-├── test_map_maker.py         # Тесты для модуля map_maker
-├── requirements.txt          # Зависимости Python
-├── Dockerfile               # Конфигурация Docker
-├── docker-compose.yml       # Конфигурация Docker Compose
-├── README.md                # Эта документация
-└── Implementation Plan.md   # План реализации
-```
-
-### Основные компоненты
-
-#### 1. OpenHands Monitor Bot (`bot.py`)
-Основной модуль бота, который:
-- Опрашивает OpenHands API каждые 5 секунд
-- Отслеживает изменения статуса задач
-- Отправляет уведомления в Telegram
-- Управляет состоянием задач в памяти
-
-#### 2. Map Maker Module (`map_maker.py`)
-Вспомогательный модуль для работы со словарями:
-- **Основная функция**: `get_definitions(word, custom_dict)` - получение определений слов
-- **Стандартный словарь**: Встроенный словарь с определениями общих терминов
-- **Поддержка пользовательских словарей**: Возможность использования внешних словарей
-- **Нормализация ввода**: Автоматическая обработка регистра и пробелов
-- **Гибкий поиск**: Приоритет пользовательских словарей над стандартными
-- **Обработка ошибок**: Корректная работа с пустыми строками и отсутствующими словами
-
-**Структура файла `map_maker.py`:**
-- `STANDARD_DICTIONARY`: Константа со стандартным словарем
-- `get_definitions()`: Основная публичная функция
-- Документация на русском языке с примерами использования
-
-#### 3. Тесты (`test_map_maker.py`)
-Комплексные тесты для модуля `map_maker.py`, покрывающие:
-- Базовую функциональность
-- Граничные случаи
-- Обработку ошибок
-- Unicode и специальные символы
-
-## 🔧 Использование
-
-### Запуск мониторинга
-После запуска бот начнет мониторить задачи OpenHands и отправлять уведомления:
+После успешной установки и настройки бот автоматически начнет мониторинг задач OpenHands. При запуске вы увидите следующие сообщения:
 
 ```
 🤖 OpenHands Monitor Bot is online and starting to poll.
+Starting polling loop...
 ```
 
-### Примеры уведомлений
+### Типы уведомлений
 
-**Новая задача:**
+Бот отправляет два типа уведомлений в Telegram:
+
+#### 1. Новые задачи
+Когда появляется новая задача в OpenHands:
 ```
 🆕 New Task Started: Реализация фичи X (ID: 12345)
 ```
 
-**Изменение статуса:**
+#### 2. Изменение статуса
+Когда статус существующей задачи изменяется:
 ```
 🔄 Task Status Update: Реализация фичи X is now COMPLETED.
 ```
 
-### Использование модуля Map Maker
+### Конфигурация
 
+#### Переменные окружения
+
+| Переменная | Описание | Значение по умолчанию | Обязательность |
+|------------|----------|----------------------|----------------|
+| `TELEGRAM_TOKEN` | Токен вашего Telegram бота | - | **Обязательно** |
+| `CHAT_ID` | ID чата для отправки уведомлений | - | **Обязательно** |
+| `OPENHANDS_API_URL` | URL OpenHands API | `http://host.docker.internal:3000` | Опционально |
+| `POLL_INTERVAL` | Интервал опроса API (секунды) | `5` | Опционально |
+
+#### Получение Telegram Bot Token
+1. Откройте Telegram и найдите @BotFather
+2. Создайте нового бота с помощью команды `/newbot`
+3. Следуйте инструкциям и сохраните полученный токен
+4. Токен выглядит примерно так: `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`
+
+#### Получение Chat ID
+1. Добавьте созданного бота в нужный чат (личный или групповой)
+2. Отправьте любое сообщение боту
+3. Используйте один из методов:
+   
+   **Метод 1: Через API**
+   ```bash
+   curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates"
+   ```
+   Найдите поле `chat.id` в ответе JSON.
+
+   **Метод 2: Через веб-интерфейс**
+   Перейдите по ссылке: `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
+   Найдите `chat.id` в ответе JSON.
+
+### Управление ботом
+
+#### Запуск в фоновом режиме (Linux/macOS)
+```bash
+nohup python bot.py > bot.log 2>&1 &
+```
+
+#### Остановка бота
+```bash
+# Найти PID процесса
+ps aux | grep "python bot.py"
+
+# Остановить процесс
+kill <PID>
+```
+
+#### Просмотр логов
+```bash
+# Docker
+docker logs openhands-monitor
+
+# Локальная установка
+tail -f bot.log
+```
+
+## 🔌 Подробное описание API
+
+### OpenHands Monitor Bot API
+
+#### Основные функции
+
+##### `send_telegram_message(message: str) -> None`
+Отправляет сообщение в Telegram с повторными попытками при ошибках.
+
+**Параметры:**
+- `message` (str): Текст сообщения для отправки
+
+**Особенности:**
+- Использует декоратор `@retry` для 3 попыток с интервалом 2 секунды
+- Логирует ошибки в консоль
+- Использует библиотеку `python-telegram-bot`
+
+##### `fetch_conversations() -> Optional[List[Dict]]`
+Получает список всех задач (conversations) из OpenHands API.
+
+**Возвращает:**
+- `List[Dict]`: Список словарей с информацией о задачах
+- `None`: В случае ошибки подключения
+
+**Особенности:**
+- Использует асинхронный HTTP-клиент `httpx`
+- Обрабатывает HTTP ошибки и ошибки подключения
+- Возвращает `None` при любых ошибках для безопасной обработки
+
+##### `poll_and_notify() -> None`
+Основной цикл мониторинга задач.
+
+**Логика работы:**
+1. Ожидает `POLL_INTERVAL` секунд (по умолчанию 5)
+2. Получает текущий список задач
+3. Сравнивает с предыдущим состоянием
+4. Отправляет уведомления об изменениях
+5. Очищает состояние завершенных задач
+
+##### `main() -> None`
+Точка входа приложения, инициализирует и запускает бота.
+
+**Проверки:**
+- Проверяет наличие обязательных переменных окружения
+- Отправляет стартовое сообщение в Telegram
+- Запускает основной цикл мониторинга
+
+### Map Maker Module API
+
+#### Константы
+
+##### `STANDARD_DICTIONARY: Dict[str, List[str]]`
+Стандартный словарь с предопределенными словами и их значениями.
+
+**Содержимое:**
 ```python
-from map_maker import get_definitions
-
-# Использование стандартного словаря
-definitions = get_definitions("apple")
-print(definitions)  # ['A fruit that grows on trees', 'A technology company founded by Steve Jobs']
-
-# Использование пользовательского словаря
-custom_dict = {
-    "python": ["Мой любимый язык программирования"],
-    "openhands": ["Платформа для разработки ИИ"]
+{
+    "apple": [
+        "A fruit that grows on trees",
+        "A technology company founded by Steve Jobs"
+    ],
+    "python": [
+        "A high-level programming language", 
+        "A large constricting snake"
+    ],
+    "openhands": [
+        "A platform for AI development and collaboration"
+    ],
+    "test": [
+        "A procedure intended to establish the quality, performance, or reliability of something",
+        "An examination of someone's knowledge or proficiency"
+    ],
+    "hello": [
+        "A greeting or expression of goodwill",
+        "Used to attract attention"
+    ],
+    "world": [
+        "The earth, together with all of its countries and peoples",
+        "A particular region or group of countries"
+    ]
 }
-definitions = get_definitions("python", custom_dict)
-print(definitions)  # ['Мой любимый язык программирования']
 ```
 
-### 📚 Детальная документация функции `get_definitions()`
+#### Функции
 
-Функция `get_definitions()` является основной функцией модуля `map_maker.py` и предоставляет гибкий механизм для получения определений слов из различных источников.
+##### `get_definitions(word: str, custom_dict: dict = None) -> list`
+Основная функция модуля для получения определений слов.
 
-#### Сигнатура функции
-```python
-def get_definitions(word: str, custom_dict: dict = None) -> list:
+**Параметры:**
+- `word` (str): Слово для поиска определений
+- `custom_dict` (dict, optional): Пользовательский словарь
+
+**Возвращает:**
+- `list`: Список определений слова
+- Пустой список `[]`, если слово не найдено
+
+**Алгоритм работы:**
+1. Нормализует входное слово (нижний регистр, удаление пробелов)
+2. Выбирает словарь для поиска (пользовательский или стандартный)
+3. Возвращает определения или пустой список
+
+### Внешние API интеграции
+
+#### Telegram Bot API
+- **Endpoint**: `https://api.telegram.org/bot{token}/sendMessage`
+- **Метод**: POST
+- **Параметры**: `chat_id`, `text`
+- **Библиотека**: `python-telegram-bot`
+
+#### OpenHands API
+- **Endpoint**: `{OPENHANDS_API_URL}/api/conversations`
+- **Метод**: GET
+- **Ответ**: JSON массив объектов задач
+- **Структура задачи**:
+  ```json
+  {
+    "id": "string",
+    "title": "string",
+    "status": "string",
+    "createdAt": "timestamp",
+    "updatedAt": "timestamp"
+  }
+  ```
+
+## 📚 Примеры
+
+### Пример 1: Базовое использование бота мониторинга
+
+#### Настройка и запуск
+```bash
+# Установка переменных окружения
+export TELEGRAM_TOKEN="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz"
+export CHAT_ID="-1001234567890"
+export OPENHANDS_API_URL="http://localhost:3000"
+
+# Запуск бота
+python bot.py
 ```
 
-#### Параметры
-- **`word`** (`str`): Слово для поиска определений. Обязательный параметр.
-- **`custom_dict`** (`dict`, optional): Пользовательский словарь, где ключи - слова (строки), а значения - списки определений. Если не указан, используется стандартный словарь.
+#### Ожидаемый вывод
+```
+🤖 OpenHands Monitor Bot is online and starting to poll.
+Starting polling loop...
+```
 
-#### Возвращаемое значение
-- **`list`**: Список строк с определениями слова. Если слово не найдено в словарях, возвращается пустой список `[]`.
+#### Примеры уведомлений в Telegram
+```
+🆕 New Task Started: Реализация фичи X (ID: 12345)
+🔄 Task Status Update: Реализация фичи X is now COMPLETED.
+🆕 New Task Started: Исправление бага Y (ID: 67890)
+🔄 Task Status Update: Исправление бага Y is now IN_PROGRESS.
+```
 
-#### Особенности работы
-1. **Нормализация ввода**: Функция автоматически нормализует входное слово:
-   - Приводит к нижнему регистру
-   - Удаляет лишние пробелы с начала и конца
-   - Пример: `"  Apple  "` → `"apple"`
+### Пример 2: Использование модуля Map Maker
 
-2. **Приоритет поиска**: Если указан `custom_dict`, поиск выполняется сначала в пользовательском словаре, затем в стандартном.
-
-3. **Стандартный словарь**: Включает предопределенные слова с их значениями:
-   - `"apple"`: ["A fruit that grows on trees", "A technology company founded by Steve Jobs"]
-   - `"python"`: ["A high-level programming language", "A large constricting snake"]
-   - `"openhands"`: ["A platform for AI development and collaboration"]
-   - `"test"`: ["A procedure intended to establish the quality...", "An examination of someone's knowledge..."]
-   - `"hello"`: ["A greeting or expression of goodwill", "Used to attract attention"]
-   - `"world"`: ["The earth, together with all of its countries...", "A particular region or group of countries"]
-
-#### Примеры использования
-
-**Базовый пример:**
+#### Базовое использование
 ```python
 from map_maker import get_definitions
 
@@ -208,53 +334,294 @@ from map_maker import get_definitions
 result = get_definitions("python")
 print(result)
 # Output: ['A high-level programming language', 'A large constricting snake']
-```
 
-**С пользовательским словарем:**
-```python
-custom_dict = {
-    "docker": ["Контейнеризация приложений", "Платформа для разработки"],
-    "kubernetes": ["Оркестратор контейнеров", "Система управления кластерами"]
-}
-
-result = get_definitions("docker", custom_dict)
-print(result)
-# Output: ['Контейнеризация приложений', 'Платформа для разработки']
-```
-
-**Обработка отсутствующих слов:**
-```python
-result = get_definitions("nonexistentword")
-print(result)
-# Output: []
-```
-
-**Работа с различными форматами ввода:**
-```python
-# Разные регистры и пробелы
+# Работа с различными форматами ввода
 print(get_definitions("  APPLE  "))  # ['A fruit that grows on trees', 'A technology company...']
 print(get_definitions("Python"))     # ['A high-level programming language', 'A large constricting snake']
 print(get_definitions("HELLO"))      # ['A greeting or expression of goodwill', 'Used to attract attention']
 ```
 
-#### Обработка ошибок
-Функция корректно обрабатывает различные сценарии:
-- **Пустая строка**: `get_definitions("")` → `[]`
-- **Только пробелы**: `get_definitions("   ")` → `[]`
-- **Нестроковые аргументы**: Вызовет ошибку времени выполнения
+#### Использование пользовательского словаря
+```python
+from map_maker import get_definitions
 
-#### Расширение функциональности
-Для расширения словаря можно:
-1. **Использовать пользовательский словарь**: Передавать свой словарь как параметр
-2. **Модифицировать стандартный словарь**: Изменить переменную `STANDARD_DICTIONARY` в файле `map_maker.py`
-3. **Создать производный модуль**: Наследоваться от существующего функционала
+# Создание пользовательского словаря
+custom_dict = {
+    "docker": ["Контейнеризация приложений", "Платформа для разработки"],
+    "kubernetes": ["Оркестратор контейнеров", "Система управления кластерами"],
+    "openhands": ["Моя любимая платформа для разработки ИИ"]
+}
 
-#### Интеграция с другими компонентами
-Функция `get_definitions()` может использоваться в различных сценариях:
-- **Обогащение данных**: Добавление определений к ключевым словам
-- **Поисковая система**: Поиск по определениям слов
-- **Образовательные приложения**: Создание словарей и учебных материалов
-- **Анализ текста**: Извлечение и классификация терминов
+# Поиск в пользовательском словаре
+result = get_definitions("docker", custom_dict)
+print(result)
+# Output: ['Контейнеризация приложений', 'Платформа для разработки']
+
+# Приоритет пользовательского словаря
+result = get_definitions("openhands", custom_dict)
+print(result)
+# Output: ['Моя любимая платформа для разработки ИИ'] (вместо стандартного определения)
+```
+
+#### Обработка отсутствующих слов
+```python
+from map_maker import get_definitions
+
+# Слова нет в словаре
+result = get_definitions("nonexistentword")
+print(result)
+# Output: []
+
+# Пустая строка
+result = get_definitions("")
+print(result)
+# Output: []
+
+# Только пробелы
+result = get_definitions("   ")
+print(result)
+# Output: []
+```
+
+### Пример 3: Интеграция с другими системами
+
+#### Использование в веб-приложении
+```python
+from flask import Flask, request, jsonify
+from map_maker import get_definitions
+
+app = Flask(__name__)
+
+@app.route('/api/definitions', methods=['GET'])
+def get_word_definitions():
+    word = request.args.get('word', '')
+    definitions = get_definitions(word)
+    return jsonify({
+        'word': word,
+        'definitions': definitions,
+        'count': len(definitions)
+    })
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+
+#### Использование в скрипте анализа текста
+```python
+from map_maker import get_definitions
+import re
+
+def analyze_text(text):
+    """Извлекает ключевые слова и их определения из текста."""
+    words = re.findall(r'\b\w+\b', text.lower())
+    results = {}
+    
+    for word in set(words):  # Убираем дубликаты
+        definitions = get_definitions(word)
+        if definitions:
+            results[word] = definitions
+    
+    return results
+
+# Пример использования
+text = "Python is a great programming language for AI development with OpenHands."
+analysis = analyze_text(text)
+print(analysis)
+# Output: {
+#     'python': ['A high-level programming language', 'A large constricting snake'],
+#     'openhands': ['A platform for AI development and collaboration']
+# }
+```
+
+### Пример 4: Расширение функциональности
+
+#### Создание производного модуля
+```python
+# advanced_map_maker.py
+from map_maker import get_definitions, STANDARD_DICTIONARY
+
+class AdvancedDictionary:
+    def __init__(self):
+        self.custom_dict = {}
+    
+    def add_definition(self, word, definition):
+        """Добавляет определение к слову."""
+        word = word.strip().lower()
+        if word not in self.custom_dict:
+            self.custom_dict[word] = []
+        self.custom_dict[word].append(definition)
+    
+    def get_all_definitions(self, word):
+        """Получает все определения слова из всех источников."""
+        # Получаем из пользовательского словаря
+        custom_defs = self.custom_dict.get(word.strip().lower(), [])
+        
+        # Получаем из стандартного словаря
+        standard_defs = get_definitions(word)
+        
+        # Объединяем, убирая дубликаты
+        all_defs = custom_defs + [d for d in standard_defs if d not in custom_defs]
+        return all_defs
+
+# Использование
+advanced_dict = AdvancedDictionary()
+advanced_dict.add_definition("ai", "Artificial Intelligence")
+advanced_dict.add_definition("ai", "Искусственный интеллект")
+
+result = advanced_dict.get_all_definitions("ai")
+print(result)
+# Output: ['Artificial Intelligence', 'Искусственный интеллект']
+```
+
+## 🔐 Авторизация
+
+### Аутентификация и безопасность
+
+#### Telegram Bot Token
+Для работы с Telegram API требуется токен бота, который обеспечивает:
+- **Идентификацию**: Уникальный идентификатор вашего бота
+- **Авторизацию**: Права на отправку сообщений от имени бота
+- **Безопасность**: Защищенный доступ к Telegram API
+
+**Получение токена:**
+1. Создайте бота через @BotFather в Telegram
+2. Сохраните токен в безопасном месте
+3. Никогда не коммитьте токен в репозиторий
+
+#### OpenHands API доступ
+Бот взаимодействует с OpenHands API для получения информации о задачах:
+
+**Требования к доступу:**
+- **URL API**: Должен быть доступен из среды выполнения бота
+- **Сетевой доступ**: Отсутствие блокировок firewall
+- **CORS**: При необходимости настроить CORS политики
+
+### Безопасное хранение учетных данных
+
+#### Переменные окружения (рекомендуется)
+Используйте переменные окружения для хранения чувствительных данных:
+
+```bash
+# .env файл (не коммитить в репозиторий!)
+TELEGRAM_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+CHAT_ID=-1001234567890
+```
+
+#### Docker Secrets (для продакшена)
+```bash
+# Создание секретов
+echo "your_telegram_token" | docker secret create telegram_token -
+echo "your_chat_id" | docker secret create chat_id -
+
+# Использование в docker-compose.yml
+services:
+  openhands-monitor:
+    image: openhands-monitor-bot
+    secrets:
+      - telegram_token
+      - chat_id
+    environment:
+      - TELEGRAM_TOKEN_FILE=/run/secrets/telegram_token
+      - CHAT_ID_FILE=/run/secrets/chat_id
+```
+
+#### Kubernetes Secrets
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bot-secrets
+type: Opaque
+stringData:
+  telegram-token: "your_telegram_token"
+  chat-id: "your_chat_id"
+```
+
+### Права доступа
+
+#### Минимальные необходимые права
+1. **Telegram Bot**:
+   - Отправка сообщений в указанный чат
+   - Чтение обновлений (для получения Chat ID)
+
+2. **OpenHands API**:
+   - Чтение списка задач (GET /api/conversations)
+   - Доступ только для чтения
+
+#### Рекомендации по безопасности
+1. **Изоляция среды**: Запускайте бота в изолированной среде (Docker, виртуальная машина)
+2. **Ограничение сетевого доступа**: Настройте firewall для ограничения входящих/исходящих соединений
+3. **Регулярное обновление**: Обновляйте зависимости для устранения уязвимостей
+4. **Мониторинг логов**: Регулярно проверяйте логи на предмет подозрительной активности
+5. **Ротация токенов**: Периодически обновляйте Telegram Bot Token
+
+### Аудит и логирование
+
+#### Логи безопасности
+Бот ведет логи следующих событий:
+- Успешная аутентификация и запуск
+- Ошибки подключения к API
+- Неудачные попытки отправки сообщений
+- Изменения в состоянии задач
+
+#### Мониторинг доступа
+```bash
+# Просмотр логов Docker контейнера
+docker logs --tail 100 openhands-monitor
+
+# Поиск подозрительной активности
+docker logs openhands-monitor | grep -i "error\|fail\|unauthorized"
+```
+
+### Инциденты безопасности
+
+#### Действия при компрометации токена
+1. **Немедленно отозвать токен** через @BotFather
+2. **Создать новый токен** и обновить переменные окружения
+3. **Проверить логи** на предмет несанкционированного доступа
+4. **Обновить все среды** с новым токеном
+
+#### Защита от DDoS атак
+- Используйте `POLL_INTERVAL` для ограничения частоты запросов
+- Реализуйте экспоненциальную задержку при ошибках
+- Рассмотрите использование rate limiting на стороне API
+
+### Совместимость и миграция
+
+#### Миграция учетных данных
+При переносе бота между средами:
+1. Экспортируйте переменные окружения из старой среды
+2. Импортируйте в новую среду
+3. Проверьте работоспособность
+4. Отзовите старые токены при необходимости
+
+#### Версионность API
+- **Telegram Bot API**: Совместимость с текущей версией библиотеки `python-telegram-bot`
+- **OpenHands API**: Совместимость с текущей структурой ответа `/api/conversations`
+
+### Дополнительные меры безопасности
+
+#### Шифрование конфигурации
+Для дополнительной безопасности можно использовать шифрование:
+
+```python
+# Пример использования шифрованных переменных окружения
+import os
+from cryptography.fernet import Fernet
+
+def decrypt_value(encrypted_value):
+    key = os.environ.get('ENCRYPTION_KEY')
+    cipher = Fernet(key.encode())
+    return cipher.decrypt(encrypted_value.encode()).decode()
+
+TELEGRAM_TOKEN = decrypt_value(os.environ.get('ENCRYPTED_TELEGRAM_TOKEN'))
+```
+
+#### Двухфакторная аутентификация
+Для критически важных систем рассмотрите:
+1. Верификацию отправки уведомлений через второй канал
+2. Подтверждение критических действий
+3. Аудит всех операций
 
 ## 🧪 Тестирование
 
