@@ -745,6 +745,59 @@ class TestGetDefinitions:
         # defaultdict при обращении через .get() не вызывает фабрику по умолчанию
         # Поэтому вернется пустой список
         assert result == []
+    
+    def test_non_dict_custom_dict_inputs(self):
+        """Тест передачи не-словарей в качестве custom_dict."""
+        import pytest
+        
+        # Тестируем различные не-словарные типы
+        non_dict_cases = [
+            ("list", ["apple", "python"]),
+            ("string", "not a dict"),
+            ("int", 42),
+            ("float", 3.14),
+            ("bool", True),
+            ("tuple", (1, 2, 3)),
+            ("set", {1, 2, 3}),
+            ("bytes", b"bytes"),
+            ("bytearray", bytearray(b"test")),
+        ]
+        
+        for name, non_dict in non_dict_cases:
+            # Все эти случаи должны вызывать AttributeError
+            # потому что у них нет метода .get()
+            with pytest.raises(AttributeError, match="object has no attribute 'get'"):
+                get_definitions("apple", non_dict)
+        
+        # None должен работать (используется стандартный словарь)
+        result = get_definitions("apple", None)
+        expected = [
+            "A fruit that grows on trees",
+            "A technology company founded by Steve Jobs"
+        ]
+        assert result == expected
+        
+        # Пустой словарь должен работать
+        result = get_definitions("apple", {})
+        assert result == []
+    
+    def test_custom_mapping_types(self):
+        """Тест работы с пользовательскими типами, реализующими mapping интерфейс."""
+        # Создаем простой класс с методом .get()
+        class CustomMapping:
+            def __init__(self):
+                self.data = {"apple": ["custom apple definition"]}
+            
+            def get(self, key, default=None):
+                return self.data.get(key, default)
+        
+        custom_mapping = CustomMapping()
+        result = get_definitions("apple", custom_mapping)
+        assert result == ["custom apple definition"]
+        
+        # Слово не найдено в пользовательском mapping
+        result = get_definitions("nonexistent", custom_mapping)
+        assert result == []
 
 
 if __name__ == "__main__":
