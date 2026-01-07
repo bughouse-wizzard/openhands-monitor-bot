@@ -57,11 +57,24 @@ def get_definitions(word: str, custom_dict: dict = None) -> list:
         >>> get_definitions("nonexistent")
         []
     """
+    # Проверяем, что word является строкой
+    if not isinstance(word, str):
+        # Преобразуем в строку для обработки
+        word = str(word)
+    
     # Нормализуем слово: приводим к нижнему регистру и удаляем лишние пробелы
     normalized_word = word.strip().lower()
     
     # Выбираем словарь для поиска
     dictionary = custom_dict if custom_dict is not None else STANDARD_DICTIONARY
     
-    # Возвращаем определения или пустой список
-    return dictionary.get(normalized_word, [])
+    # Возвращаем копию списка определений или пустой список
+    # Используем копию, чтобы избежать изменения оригинального словаря
+    definitions = dictionary.get(normalized_word, [])
+    
+    # Если definitions не является списком, оборачиваем его в список
+    if not isinstance(definitions, list):
+        definitions = [definitions]
+    
+    # Возвращаем копию списка
+    return list(definitions)

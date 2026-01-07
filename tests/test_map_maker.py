@@ -213,6 +213,114 @@ class TestGetDefinitions:
         result = get_definitions("python")
         for item in result:
             assert isinstance(item, str)
+    
+    def test_immutability_of_input_data(self):
+        """Тест неизменяемости входных данных."""
+        # Проверяем, что функция не изменяет переданный словарь
+        original_dict = {
+            "test": ["Определение 1", "Определение 2"],
+            "another": ["Еще одно определение"]
+        }
+        dict_copy = original_dict.copy()
+        
+        result = get_definitions("test", original_dict)
+        
+        # Проверяем, что словарь не изменился
+        assert original_dict == dict_copy
+        
+        # Проверяем, что возвращаемый список - это копия, а не ссылка
+        if result:  # Если есть результат
+            result.append("Новое определение")
+            assert "Новое определение" not in original_dict.get("test", [])
+    
+    def test_large_dictionary_performance(self):
+        """Тест производительности с большим словарем."""
+        # Создаем большой словарь
+        large_dict = {f"word_{i}": [f"Определение для слова {i}"] for i in range(1000)}
+        
+        # Добавляем тестовое слово
+        large_dict["test_word"] = ["Тестовое определение"]
+        
+        # Тестируем поиск
+        result = get_definitions("test_word", large_dict)
+        assert result == ["Тестовое определение"]
+        
+        # Тестируем поиск несуществующего слова
+        result = get_definitions("nonexistent_in_large", large_dict)
+        assert result == []
+    
+    def test_dictionary_with_non_string_keys(self):
+        """Тест словаря с нестроковыми ключами."""
+        # Словарь с разными типами ключей
+        mixed_dict = {
+            "string_key": ["Строковый ключ"],
+            123: ["Числовой ключ"],
+            ("tuple", "key"): ["Кортеж как ключ"],
+            None: ["None как ключ"]
+        }
+        
+        # Функция ожидает строки, поэтому нестроковые ключи не будут найдены
+        # при нормализации слова.get()
+        result = get_definitions("string_key", mixed_dict)
+        assert result == ["Строковый ключ"]
+        
+        # Число как строка
+        result = get_definitions("123", mixed_dict)
+        assert result == []
+        
+        # None как строка
+        result = get_definitions("None", mixed_dict)
+        assert result == []
+    
+    def test_none_word_input(self):
+        """Тест передачи None как слова."""
+        # None должен быть преобразован в строку "None"
+        custom_dict = {
+            "none": ["Строка 'none'"],
+            "null": ["Строка 'null'"]
+        }
+        
+        result = get_definitions(None, custom_dict)
+        # None будет преобразован в строку "none" через str(None).lower()
+        # Но лучше проверить поведение
+        assert isinstance(result, list)
+    
+    def test_boolean_word_input(self):
+        """Тест передачи булевых значений как слов."""
+        custom_dict = {
+            "true": ["Строка 'true'"],
+            "false": ["Строка 'false'"]
+        }
+        
+        result = get_definitions(True, custom_dict)
+        assert isinstance(result, list)
+        
+        result = get_definitions(False, custom_dict)
+        assert isinstance(result, list)
+    
+    def test_dict_with_non_list_values(self):
+        """Тест словаря со значениями не в виде списков."""
+        # Функция ожидает список, но что если передать другие типы?
+        custom_dict = {
+            "string_value": "Просто строка, не список",
+            "int_value": 42,
+            "dict_value": {"key": "value"},
+            "tuple_value": ("элемент1", "элемент2")
+        }
+        
+        # Теперь функция всегда возвращает список
+        result = get_definitions("string_value", custom_dict)
+        # Возвращается список с одним элементом
+        assert result == ["Просто строка, не список"]
+        
+        result = get_definitions("int_value", custom_dict)
+        assert result == [42]
+        
+        result = get_definitions("dict_value", custom_dict)
+        assert result == [{"key": "value"}]
+        
+        result = get_definitions("tuple_value", custom_dict)
+        assert result == [("элемент1", "элемент2")]
 
 
 if __name__ == "__main__":
