@@ -398,6 +398,157 @@ class TestGetDefinitions:
         assert result is not custom_dict["complex_word"]  # Список скопирован
         # Вложенные структуры могут быть теми же объектами (это нормально для list())
 
+    def test_very_long_strings(self):
+        """Тест очень длинных строк."""
+        # Очень длинное слово
+        long_word = "a" * 10000
+        custom_dict = {
+            long_word: ["Определение для очень длинного слова"]
+        }
+        
+        result = get_definitions(long_word, custom_dict)
+        assert result == ["Определение для очень длинного слова"]
+        
+        # Очень длинное определение
+        long_definition = "Очень длинное определение " * 1000
+        custom_dict = {
+            "test": [long_definition]
+        }
+        
+        result = get_definitions("test", custom_dict)
+        assert result == [long_definition]
+        assert len(result[0]) > 10000  # Проверяем, что определение действительно длинное
+
+    def test_unicode_normalization(self):
+        """Тест нормализации Unicode символов."""
+        # Слова с разными формами Unicode
+        test_cases = [
+            ("café", "cafe"),  # символ с акцентом
+            ("naïve", "naive"),  # символ с умляутом
+            ("résumé", "resume"),  # несколько символов с акцентами
+        ]
+        
+        for word, expected_normalized in test_cases:
+            # Создаем словарь с нормализованным словом
+            custom_dict = {expected_normalized: [f"Определение для {expected_normalized}"]}
+            
+            # Проверяем, что функция нормализует слово
+            result = get_definitions(word, custom_dict)
+            # Функция использует .lower(), но не нормализует Unicode
+            # Поэтому проверяем, что слово не найдено (ожидаемое поведение)
+            assert result == []
+
+    def test_empty_dictionary_edge_cases(self):
+        """Тест граничных случаев с пустыми словарями."""
+        # Полностью пустой словарь
+        result = get_definitions("anyword", {})
+        assert result == []
+        
+        # Словарь с пустыми ключами
+        custom_dict = {
+            "": ["Определение для пустой строки"],
+            "   ": ["Определение для пробелов"]
+        }
+        
+        result = get_definitions("", custom_dict)
+        assert result == ["Определение для пустой строки"]
+        
+        # Функция использует strip(), поэтому "   " становится ""
+        result = get_definitions("   ", custom_dict)
+        assert result == ["Определение для пустой строки"]  # После strip() это пустая строка
+
+    def test_performance_with_various_dict_sizes(self):
+        """Тест производительности с разными размерами словарей."""
+        import time
+        
+        # Тест с маленьким словарем
+        small_dict = {f"word_{i}": [f"def_{i}"] for i in range(10)}
+        start_time = time.time()
+        result = get_definitions("word_5", small_dict)
+        small_time = time.time() - start_time
+        assert result == ["def_5"]
+        
+        # Тест со средним словарем
+        medium_dict = {f"word_{i}": [f"def_{i}"] for i in range(1000)}
+        start_time = time.time()
+        result = get_definitions("word_500", medium_dict)
+        medium_time = time.time() - start_time
+        assert result == ["def_500"]
+        
+        # Тест с большим словарем
+        large_dict = {f"word_{i}": [f"def_{i}"] for i in range(10000)}
+        start_time = time.time()
+        result = get_definitions("word_5000", large_dict)
+        large_time = time.time() - start_time
+        assert result == ["def_5000"]
+        
+        # Проверяем, что время поиска разумное (менее 0.1 секунды для каждого)
+        assert small_time < 0.1, f"Small dict search took {small_time} seconds"
+        assert medium_time < 0.1, f"Medium dict search took {medium_time} seconds"
+        assert large_time < 0.1, f"Large dict search took {large_time} seconds"
+
+    def test_special_unicode_characters(self):
+        """Тест специальных символов Unicode."""
+        # Эмодзи и специальные символы
+        custom_dict = {
+            "🎉": ["Символ праздника"],
+            "🔥": ["Символ огня"],
+            "❤️": ["Символ сердца"],
+            "café": ["Французское кафе"],
+            "naïve": ["Наивный на французском"],
+        }
+        
+        result = get_definitions("🎉", custom_dict)
+        assert result == ["Символ праздника"]
+        
+        result = get_definitions("🔥", custom_dict)
+        assert result == ["Символ огня"]
+        
+        result = get_definitions("café", custom_dict)
+        assert result == ["Французское кафе"]
+
+    def test_dict_with_function_as_value(self):
+        """Тест словаря с функцией в качестве значения."""
+        def custom_function():
+            return "Результат функции"
+        
+        custom_dict = {
+            "function_word": custom_function
+        }
+        
+        result = get_definitions("function_word", custom_dict)
+        # Функция будет обернута в список
+        assert result == [custom_function]
+        assert callable(result[0])  # Проверяем, что это действительно функция
+
+    def test_concurrent_access_simulation(self):
+        """Тест симуляции конкурентного доступа к функции."""
+        import threading
+        
+        results = []
+        
+        def worker(word, custom_dict, results_list):
+            result = get_definitions(word, custom_dict)
+            results_list.append((word, result))
+        
+        custom_dict = {f"word_{i}": [f"def_{i}"] for i in range(100)}
+        
+        threads = []
+        for i in range(10):
+            t = threading.Thread(target=worker, args=(f"word_{i}", custom_dict, results))
+            threads.append(t)
+            t.start()
+        
+        for t in threads:
+            t.join()
+        
+        # Проверяем, что все результаты корректны
+        for i, (word, result) in enumerate(results):
+            if i < 10:  # Первые 10 слов существуют в словаре
+                assert result == [f"def_{i}"]
+            else:
+                assert result == []
+
 
 if __name__ == "__main__":
     # Запуск тестов при прямом выполнении файла
