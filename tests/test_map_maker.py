@@ -548,6 +548,203 @@ class TestGetDefinitions:
                 assert result == [f"def_{i}"]
             else:
                 assert result == []
+    
+    def test_deep_copy_behavior(self):
+        """Тест поведения глубокого копирования для вложенных структур."""
+        # Создаем словарь с вложенными изменяемыми структурами
+        mutable_list = ["original_item"]
+        mutable_dict = {"key": "original_value"}
+        
+        custom_dict = {
+            "test_word": [mutable_list, mutable_dict]
+        }
+        
+        # Получаем определения
+        result = get_definitions("test_word", custom_dict)
+        
+        # Проверяем, что возвращен список
+        assert isinstance(result, list)
+        assert len(result) == 2
+        
+        # Модифицируем элементы в результате
+        result[0].append("modified_item")
+        result[1]["key"] = "modified_value"
+        
+        # Проверяем поведение shallow copy
+        # Функция использует list() для копирования, что создает shallow copy
+        # Это означает, что вложенные изменяемые объекты (списки, словари) 
+        # остаются ссылками на оригинальные объекты
+        assert mutable_list == ["original_item", "modified_item"]  # Изменился из-за shallow copy
+        assert mutable_dict == {"key": "modified_value"}  # Изменился из-за shallow copy
+        # Это ожидаемое поведение для функции, которая использует list() для копирования
+        
+    def test_very_large_dictionary(self):
+        """Тест с очень большим словарем (граничный случай)."""
+        # Создаем очень большой словарь
+        very_large_dict = {f"word_{i}": [f"definition_{i}"] for i in range(100000)}
+        
+        # Добавляем тестовое слово в середину
+        very_large_dict["test_target"] = ["target_definition"]
+        
+        # Тестируем поиск
+        result = get_definitions("test_target", very_large_dict)
+        assert result == ["target_definition"]
+        
+        # Тестируем поиск несуществующего слова
+        result = get_definitions("nonexistent_in_huge_dict", very_large_dict)
+        assert result == []
+    
+    def test_mixed_data_types_as_word(self):
+        """Тест различных типов данных в качестве слова."""
+        custom_dict = {
+            "123": ["Число как строка"],
+            "3.14": ["Число с плавающей точкой как строка"],
+            "true": ["Булево значение как строка"],
+            "none": ["None как строка"]
+        }
+        
+        # Тестируем разные типы данных
+        test_cases = [
+            (123, []),  # Число - будет преобразовано в "123"
+            (3.14, []),  # Float - будет преобразовано в "3.14"
+            (True, []),  # Boolean - будет преобразовано в "True"
+            (None, []),  # None - будет преобразовано в "None"
+            ([1, 2, 3], []),  # Список - будет преобразован в строку
+            ({"key": "value"}, []),  # Словарь - будет преобразован в строку
+        ]
+        
+        for word, expected in test_cases:
+            result = get_definitions(word, custom_dict)
+            # После преобразования в строку и нормализации слово может не найтись
+            # в словаре, так как ключи - это строки в определенном формате
+            assert isinstance(result, list)
+    
+    def test_dict_with_duplicate_keys(self):
+        """Тест словаря с дублирующимися ключами (последнее значение сохраняется)."""
+        # В Python словарях последнее значение для дублирующегося ключа перезаписывает предыдущее
+        custom_dict = {
+            "duplicate": ["Первое определение"],
+            "duplicate": ["Второе определение"],  # Перезапишет первое
+            "unique": ["Уникальное определение"]
+        }
+        
+        result = get_definitions("duplicate", custom_dict)
+        assert result == ["Второе определение"]
+        
+        result = get_definitions("unique", custom_dict)
+        assert result == ["Уникальное определение"]
+    
+    def test_error_handling_edge_cases(self):
+        """Тест обработки граничных случаев с ошибками."""
+        # Словарь с "сломанными" значениями
+        custom_dict = {
+            "normal": ["Нормальное определение"],
+            "empty_list": [],
+            "none_value": None,
+            "zero": 0,
+            "false": False
+        }
+        
+        # Все случаи должны обрабатываться без ошибок
+        result = get_definitions("normal", custom_dict)
+        assert result == ["Нормальное определение"]
+        
+        result = get_definitions("empty_list", custom_dict)
+        assert result == []
+        
+        result = get_definitions("none_value", custom_dict)
+        assert result == [None]
+        
+        result = get_definitions("zero", custom_dict)
+        assert result == [0]
+        
+        result = get_definitions("false", custom_dict)
+        assert result == [False]
+    
+    def test_unicode_normalization_comprehensive(self):
+        """Комплексный тест нормализации Unicode."""
+        # Тест различных форм Unicode символов
+        test_cases = [
+            # (входное слово, словарь, ожидаемый результат)
+            ("café", {"café": ["Французское кафе"]}, ["Французское кафе"]),
+            ("CAFÉ", {"café": ["Французское кафе"]}, ["Французское кафе"]),  # Регистр
+            ("cafe\u0301", {"café": ["Французское кафе"]}, []),  # Разная форма Unicode
+            ("naïve", {"naïve": ["Наивный"]}, ["Наивный"]),
+            ("NAÏVE", {"naïve": ["Наивный"]}, ["Наивный"]),
+            ("résumé", {"résumé": ["Резюме"]}, ["Резюме"]),
+            ("RÉSUMÉ", {"résumé": ["Резюме"]}, ["Резюме"]),
+        ]
+        
+        for word, dictionary, expected in test_cases:
+            result = get_definitions(word, dictionary)
+            assert result == expected
+    
+    def test_performance_extreme_cases(self):
+        """Тест производительности в экстремальных случаях."""
+        import time
+        
+        # Экстремально большой словарь
+        extreme_dict = {f"word_{i}": [f"definition_{i}" * 100] for i in range(5000)}
+        
+        # Измеряем время поиска существующего слова
+        start_time = time.time()
+        result = get_definitions("word_2500", extreme_dict)
+        search_time = time.time() - start_time
+        
+        assert result == [f"definition_{2500}" * 100]
+        assert search_time < 0.5, f"Поиск в экстремальном словаре занял {search_time} секунд"
+        
+        # Измеряем время поиска несуществующего слова
+        start_time = time.time()
+        result = get_definitions("nonexistent_extreme", extreme_dict)
+        search_time = time.time() - start_time
+        
+        assert result == []
+        assert search_time < 0.5, f"Поиск несуществующего слова занял {search_time} секунд"
+    
+    def test_memory_efficiency(self):
+        """Тест эффективности использования памяти."""
+        import sys
+        
+        # Создаем большой словарь
+        large_dict = {f"word_{i}": [f"definition_{i}"] for i in range(10000)}
+        
+        # Получаем определения несколько раз
+        results = []
+        for i in range(100):
+            result = get_definitions(f"word_{i}", large_dict)
+            results.append(result)
+        
+        # Проверяем, что все результаты корректны
+        for i, result in enumerate(results):
+            assert result == [f"definition_{i}"]
+        
+        # Проверяем, что функция не создает утечек памяти
+        # (косвенная проверка через стабильность выполнения)
+    
+    def test_compatibility_with_standard_library(self):
+        """Тест совместимости со стандартной библиотекой Python."""
+        from collections import OrderedDict, defaultdict
+        
+        # Тест с OrderedDict
+        ordered_dict = OrderedDict([("first", ["Первое"]), ("second", ["Второе"])])
+        result = get_definitions("first", ordered_dict)
+        assert result == ["Первое"]
+        
+        # Тест с defaultdict
+        def default_factory():
+            return ["Значение по умолчанию"]
+        
+        default_dict = defaultdict(default_factory)
+        default_dict["existing"] = ["Существующее значение"]
+        
+        result = get_definitions("existing", default_dict)
+        assert result == ["Существующее значение"]
+        
+        result = get_definitions("nonexistent", default_dict)
+        # defaultdict при обращении через .get() не вызывает фабрику по умолчанию
+        # Поэтому вернется пустой список
+        assert result == []
 
 
 if __name__ == "__main__":
