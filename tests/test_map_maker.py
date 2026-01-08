@@ -605,18 +605,17 @@ class TestGetDefinitions:
         
         # Тестируем разные типы данных
         test_cases = [
-            (123, []),  # Число - будет преобразовано в "123"
-            (3.14, []),  # Float - будет преобразовано в "3.14"
-            (True, []),  # Boolean - будет преобразовано в "True"
-            (None, []),  # None - будет преобразовано в "None"
-            ([1, 2, 3], []),  # Список - будет преобразован в строку
-            ({"key": "value"}, []),  # Словарь - будет преобразован в строку
+            (123, ["Число как строка"]),  # Число - будет преобразовано в "123"
+            (3.14, ["Число с плавающей точкой как строка"]),  # Float - будет преобразовано в "3.14"
+            (True, ["Булево значение как строка"]),  # Boolean - будет преобразовано в "True" -> .lower() -> "true"
+            (None, ["None как строка"]),  # None - будет преобразовано в "None" -> .lower() -> "none"
+            ([1, 2, 3], []),  # Список - будет преобразован в строку "[1, 2, 3]"
+            ({"key": "value"}, []),  # Словарь - будет преобразован в строку "{'key': 'value'}"
         ]
         
         for word, expected in test_cases:
             result = get_definitions(word, custom_dict)
-            # После преобразования в строку и нормализации слово может не найтись
-            # в словаре, так как ключи - это строки в определенном формате
+            assert result == expected
             assert isinstance(result, list)
     
     def test_dict_with_duplicate_keys(self):
@@ -798,6 +797,70 @@ class TestGetDefinitions:
         # Слово не найдено в пользовательском mapping
         result = get_definitions("nonexistent", custom_mapping)
         assert result == []
+    
+    def test_object_with_str_method(self):
+        """Тест передачи объекта с методом __str__ в качестве слова."""
+        class CustomStringObject:
+            def __str__(self):
+                return "apple"
+        
+        custom_obj = CustomStringObject()
+        result = get_definitions(custom_obj)
+        expected = [
+            "A fruit that grows on trees",
+            "A technology company founded by Steve Jobs"
+        ]
+        assert result == expected
+        
+        # Объект, возвращающий строку не из словаря
+        class CustomStringObject2:
+            def __str__(self):
+                return "nonexistentword"
+        
+        custom_obj2 = CustomStringObject2()
+        result = get_definitions(custom_obj2)
+        assert result == []
+    
+    def test_dict_with_non_list_iterable_value(self):
+        """Тест словаря со значением, которое является итерируемым, но не списком."""
+        from collections.abc import Iterable
+        
+        class FakeList(Iterable):
+            def __init__(self, items):
+                self.items = items
+            
+            def __iter__(self):
+                return iter(self.items)
+            
+            def __len__(self):
+                return len(self.items)
+        
+        fake_list = FakeList(["def1", "def2"])
+        custom_dict = {"test": fake_list}
+        
+        # Функция оборачивает не-списки в список
+        result = get_definitions("test", custom_dict)
+        # Возвращается список с одним элементом - объектом FakeList
+        assert len(result) == 1
+        assert isinstance(result[0], FakeList)
+        assert list(result[0]) == ["def1", "def2"]
+    
+    def test_empty_string_key_in_dict(self):
+        """Тест поиска по пустой строке как ключу в словаре."""
+        custom_dict = {
+            "": ["Определение для пустой строки"],
+            "normal": ["Обычное определение"]
+        }
+        
+        result = get_definitions("", custom_dict)
+        assert result == ["Определение для пустой строки"]
+        
+        # Строка из пробелов нормализуется к пустой строке
+        result = get_definitions("   ", custom_dict)
+        assert result == ["Определение для пустой строки"]
+        
+        result = get_definitions("normal", custom_dict)
+        assert result == ["Обычное определение"]
 
 
 if __name__ == "__main__":
