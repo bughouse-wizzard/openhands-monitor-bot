@@ -47,6 +47,7 @@ curl "https://api.telegram.org/bot<ВАШ_ТОКЕН>/getUpdates"
 - [Разработка](#разработка)
 - [Тестирование](#тестирование)
 - [Вклад в проект](#вклад-в-проект)
+- [Поддержка и обслуживание](#поддержка-и-обслуживание)
 - [Часто задаваемые вопросы (FAQ)](#часто-задаваемые-вопросы-faq)
 - [Лицензия](#лицензия)
 - [Контакты](#контакты)
@@ -66,10 +67,54 @@ OpenHands Monitor Bot — это система мониторинга, кото
 - **Модуль словаря**: Дополнительный модуль `map_maker.py` для работы с определениями слов
 
 ### Архитектура:
-- **Основной модуль**: `bot.py` — ядро системы мониторинга
-- **Модуль словаря**: `map_maker.py` — работа с определениями слов
-- **Тесты**: Полное покрытие тестами модуля словаря
-- **Docker**: Готовые конфигурации для контейнеризации
+
+OpenHands Monitor Bot построен по модульной архитектуре с четким разделением ответственности между компонентами:
+
+#### **Компоненты системы:**
+
+1. **Основной модуль мониторинга (`bot.py`)**:
+   - **Ядро системы**: Асинхронный цикл опроса API OpenHands
+   - **Состояние**: Хранение и сравнение состояний разговоров в памяти
+   - **Уведомления**: Интеграция с Telegram API для отправки оповещений
+   - **Обработка ошибок**: Механизмы повторных попыток и обработки сетевых ошибок
+
+2. **Модуль словаря (`map_maker.py`)**:
+   - **Словарная база**: Стандартный словарь с определениями слов
+   - **API для поиска**: Функция `get_definitions()` для получения определений
+   - **Гибкость**: Поддержка пользовательских словарей
+   - **Нормализация**: Автоматическая обработка входных данных
+
+3. **Инфраструктурные компоненты**:
+   - **Docker**: Контейнеризация для простого развертывания
+   - **Docker Compose**: Оркестрация для локальной разработки и продакшн
+   - **Тесты**: Полное покрытие модуля словаря тестами
+
+#### **Архитектурные принципы:**
+
+- **Асинхронность**: Использование `asyncio` для эффективного опроса API
+- **Модульность**: Четкое разделение между мониторингом и словарным функционалом
+- **Конфигурируемость**: Настройка через переменные окружения
+- **Отказоустойчивость**: Механизмы повторных попыток и обработки ошибок
+- **Масштабируемость**: Простая архитектура, допускающая горизонтальное масштабирование
+
+#### **Поток данных:**
+
+```
+OpenHands API → [HTTP запрос] → bot.py → [Обработка состояния] → [Сравнение] → [Уведомление] → Telegram API
+                                                              ↓
+                                                      [Кэш состояний в памяти]
+```
+
+#### **Технологический стек:**
+
+- **Язык**: Python 3.11+
+- **Библиотеки**: 
+  - `python-telegram-bot` для интеграции с Telegram
+  - `httpx` для асинхронных HTTP-запросов
+  - `tenacity` для механизмов повторных попыток
+  - `asyncio` для асинхронного программирования
+- **Контейнеризация**: Docker, Docker Compose
+- **Тестирование**: pytest, pytest-asyncio, pytest-cov
 
 ## Установка
 
@@ -468,20 +513,190 @@ xdg-open htmlcov/index.html  # На Linux
 
 ## 🚀 Развертывание в продакшн
 
-### Рекомендации по продакшн-развертыванию
+### Особые примечания для развертывания
 
-#### Высокая доступность:
-- Используйте Docker Swarm или Kubernetes для оркестрации
-- Реализуйте health checks (проверки здоровья)
-- Настройте правильное логирование и мониторинг
-- Настройте автоматические перезапуски
+#### 1. **Подготовка к продакшн-развертыванию**
 
-#### Масштабирование:
-- Одного экземпляра достаточно для большинства случаев использования
-- Для высоконагруженных сред рассмотрите:
-  - Увеличение интервала опроса
-  - Реализацию rate limiting (ограничения частоты запросов)
-  - Использование очередей сообщений для уведомлений
+**Требования к инфраструктуре:**
+- **Сервер**: Минимум 1 ГБ RAM, 1 CPU ядро, 10 ГБ дискового пространства
+- **Сеть**: Стабильное интернет-соединение для доступа к API OpenHands и Telegram
+- **Безопасность**: Настроенный файрволл, ограниченный доступ к портам
+
+**Конфигурация безопасности:**
+```bash
+# Использование секретов вместо переменных окружения в файлах
+docker run -d \
+  --name openhands-monitor \
+  --restart unless-stopped \
+  --network host \
+  --mount type=bind,source=/path/to/secrets,target=/run/secrets,readonly \
+  -e TELEGRAM_TOKEN_FILE=/run/secrets/telegram_token \
+  -e CHAT_ID_FILE=/run/secrets/chat_id \
+  openhands-monitor
+```
+
+#### 2. **Оркестрация и управление**
+
+**Docker Swarm/Kubernetes:**
+```yaml
+# Пример deployment для Kubernetes
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openhands-monitor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openhands-monitor
+  template:
+    metadata:
+      labels:
+        app: openhands-monitor
+    spec:
+      containers:
+      - name: openhands-monitor
+        image: openhands-monitor:latest
+        env:
+        - name: TELEGRAM_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: telegram-secrets
+              key: token
+        - name: CHAT_ID
+          valueFrom:
+            secretKeyRef:
+              name: telegram-secrets
+              key: chat-id
+        - name: OPENHANDS_API_URL
+          value: "https://api.openhands.example.com"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command: ["python", "-c", "import sys; sys.exit(0)"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["python", "-c", "import sys; sys.exit(0)"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+```
+
+#### 3. **Высокая доступность и отказоустойчивость**
+
+**Стратегии:**
+- **Множественные экземпляры**: Запуск 2+ экземпляров за балансировщиком нагрузки
+- **Health checks**: Регулярные проверки работоспособности
+- **Автоматическое восстановление**: Автоматический перезапуск при сбоях
+- **Резервное копирование**: Регулярное резервное копирование состояния
+
+**Конфигурация для высокой доступности:**
+```yaml
+# docker-compose.ha.yml
+version: '3.8'
+
+services:
+  openhands-monitor:
+    image: openhands-monitor:latest
+    deploy:
+      mode: replicated
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - CHAT_ID=${CHAT_ID}
+      - OPENHANDS_API_URL=${OPENHANDS_API_URL}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+#### 4. **Масштабирование и производительность**
+
+**Оптимизация для высоких нагрузок:**
+- **Увеличение интервала опроса**: Измените `POLL_INTERVAL` в `bot.py` с 5 до 30-60 секунд
+- **Rate limiting**: Добавьте ограничение частоты запросов к API OpenHands
+- **Кэширование**: Реализуйте кэширование ответов API
+- **Балансировка нагрузки**: Используйте несколько экземпляров для распределения нагрузки
+
+**Мониторинг производительности:**
+```bash
+# Мониторинг использования ресурсов
+docker stats openhands-monitor
+
+# Просмотр логов в реальном времени
+docker logs -f openhands-monitor
+
+# Проверка состояния контейнера
+docker inspect openhands-monitor --format='{{.State.Status}}'
+```
+
+#### 5. **Резервное копирование и восстановление**
+
+**Критические данные для резервного копирования:**
+1. **Конфигурация**: Файлы `.env`, Dockerfile, docker-compose.yml
+2. **Код**: Весь исходный код проекта
+3. **Состояние**: Текущее состояние разговоров (хранится в памяти)
+
+**Процедура восстановления:**
+```bash
+# 1. Восстановление из резервной копии
+git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
+cd openhands-monitor-bot
+
+# 2. Восстановление конфигурации
+cp backup/.env .
+
+# 3. Запуск системы
+docker-compose up -d
+
+# 4. Проверка работоспособности
+docker logs openhands-monitor
+```
+
+#### 6. **Обновление и обслуживание**
+
+**Процесс обновления:**
+```bash
+# 1. Остановка текущей версии
+docker-compose down
+
+# 2. Получение обновлений
+git pull origin main
+
+# 3. Пересборка образа
+docker-compose build --no-cache
+
+# 4. Запуск обновленной версии
+docker-compose up -d
+
+# 5. Проверка обновления
+docker logs openhands-monitor
+```
+
+**Плановое обслуживание:**
+- **Еженедельно**: Проверка обновлений зависимостей
+- **Ежемесячно**: Обзор логов на предмет аномалий
+- **Квартально**: Тестирование процедуры восстановления
+- **Ежегодно**: Аудит безопасности и обновление сертификатов
 
 ## 📊 Мониторинг и логирование
 
@@ -684,6 +899,232 @@ docker exec openhands-monitor ps aux --sort=-%mem
 # Мониторинг сетевых соединений
 docker exec openhands-monitor netstat -an | grep ESTABLISHED
 ```
+
+## 🛠 Поддержка и обслуживание
+
+### Процедуры поддержки
+
+#### 1. **Мониторинг работоспособности**
+
+**Ежедневные проверки:**
+```bash
+# Проверка статуса контейнера
+docker ps | grep openhands-monitor
+
+# Просмотр последних логов
+docker logs --tail 50 openhands-monitor
+
+# Проверка использования ресурсов
+docker stats openhands-monitor --no-stream
+```
+
+**Ключевые метрики для мониторинга:**
+- **Доступность**: Контейнер должен быть в состоянии "Running"
+- **Логи**: Отсутствие критических ошибок (ERROR level)
+- **Ресурсы**: Потребление памяти < 80% от лимита
+- **Сеть**: Успешные подключения к API OpenHands и Telegram
+
+#### 2. **Устранение неполадок**
+
+**Типичные проблемы и решения:**
+
+**Проблема**: Бот не отправляет уведомления
+```bash
+# 1. Проверьте логи на наличие ошибок
+docker logs openhands-monitor
+
+# 2. Проверьте конфигурацию
+docker exec openhands-monitor env | grep TELEGRAM
+
+# 3. Проверьте доступность Telegram API
+curl -s "https://api.telegram.org/bot<TEST_TOKEN>/getMe"
+
+# 4. Перезапустите бота
+docker-compose restart
+```
+
+**Проблема**: Высокое потребление памяти
+```bash
+# 1. Проверьте текущее использование
+docker stats openhands-monitor
+
+# 2. Ограничьте память в docker-compose.yml
+# Добавьте в конфигурацию:
+# mem_limit: 512m
+# mem_reservation: 256m
+
+# 3. Перезапустите с ограничениями
+docker-compose up -d --force-recreate
+```
+
+**Проблема**: Потеря соединения с API OpenHands
+```bash
+# 1. Проверьте доступность API
+curl -s ${OPENHANDS_API_URL}/health
+
+# 2. Проверьте настройки сети
+docker network inspect bridge
+
+# 3. Увеличьте таймауты в коде
+# Отредактируйте bot.py, добавьте timeout в httpx.AsyncClient
+```
+
+#### 3. **Резервное копирование и восстановление**
+
+**Автоматическое резервное копирование:**
+```bash
+#!/bin/bash
+# backup.sh - скрипт для автоматического резервного копирования
+BACKUP_DIR="/backup/openhands-monitor"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+# Создание директории для бэкапа
+mkdir -p $BACKUP_DIR/$DATE
+
+# Копирование конфигурации
+cp .env $BACKUP_DIR/$DATE/
+cp docker-compose.yml $BACKUP_DIR/$DATE/
+
+# Копирование кода
+git archive --format=tar HEAD | gzip > $BACKUP_DIR/$DATE/code.tar.gz
+
+# Сохранение состояния Docker
+docker inspect openhands-monitor > $BACKUP_DIR/$DATE/container_state.json
+
+# Очистка старых бэкапов (храним 30 дней)
+find $BACKUP_DIR -type d -mtime +30 -exec rm -rf {} \;
+```
+
+**Восстановление из бэкапа:**
+```bash
+#!/bin/bash
+# restore.sh - скрипт для восстановления из бэкапа
+BACKUP_DIR="/backup/openhands-monitor"
+LATEST_BACKUP=$(ls -td $BACKUP_DIR/*/ | head -1)
+
+# Остановка текущего контейнера
+docker-compose down
+
+# Восстановление конфигурации
+cp $LATEST_BACKUP/.env .
+cp $LATEST_BACKUP/docker-compose.yml .
+
+# Восстановление кода
+tar -xzf $LATEST_BACKUP/code.tar.gz
+
+# Запуск восстановленной системы
+docker-compose up -d
+```
+
+#### 4. **Обновление зависимостей**
+
+**Процесс обновления:**
+```bash
+# 1. Проверка обновлений зависимостей
+pip list --outdated
+
+# 2. Обновление requirements.txt
+pip freeze > requirements.txt.new
+diff requirements.txt requirements.txt.new
+
+# 3. Тестирование с обновленными зависимостями
+docker-compose build --no-cache
+docker-compose up -d
+docker-compose logs --tail 100
+
+# 4. Применение обновлений
+mv requirements.txt.new requirements.txt
+git add requirements.txt
+git commit -m "Update dependencies"
+```
+
+#### 5. **Аудит безопасности**
+
+**Регулярные проверки безопасности:**
+```bash
+# 1. Проверка уязвимостей в зависимостях
+pip-audit
+
+# 2. Сканирование Docker образа
+docker scan openhands-monitor
+
+# 3. Проверка конфигурации безопасности
+# - Нет hardcoded секретов в коде
+# - Используются переменные окружения
+# - Ограничены права доступа
+# - Включено логирование
+
+# 4. Обновление базовых образов
+docker pull python:3.11-slim
+docker-compose build --no-cache
+```
+
+#### 6. **Производительность и оптимизация**
+
+**Настройка для оптимальной производительности:**
+```yaml
+# docker-compose.optimized.yml
+version: '3.8'
+
+services:
+  openhands-monitor:
+    build: .
+    container_name: openhands-monitor-optimized
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - CHAT_ID=${CHAT_ID}
+      - OPENHANDS_API_URL=${OPENHANDS_API_URL}
+    # Оптимизация ресурсов
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    # Оптимизация производительности
+    sysctls:
+      - net.core.somaxconn=1024
+    # Health checks
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+#### 7. **Документация и знания**
+
+**Ведение документации:**
+1. **Операционные процедуры**: Документирование всех рутинных операций
+2. **Инциденты**: Запись всех инцидентов и их решений
+3. **Конфигурация**: Версионирование всех конфигурационных файлов
+4. **Зависимости**: Отслеживание версий всех зависимостей
+
+**База знаний:**
+- [X] Установка и настройка
+- [X] Развертывание в продакшн
+- [X] Устранение неполадок
+- [X] Резервное копирование и восстановление
+- [X] Обновление и обслуживание
+- [X] Мониторинг и оптимизация
+
+#### 8. **Эскалация проблем**
+
+**Уровни поддержки:**
+1. **Уровень 1**: Базовые проблемы (перезапуск, проверка логов)
+2. **Уровень 2**: Проблемы конфигурации (настройка переменных окружения)
+3. **Уровень 3**: Проблемы кода (ошибки в логике, баги)
+4. **Уровень 4**: Проблемы инфраструктуры (сеть, Docker, ОС)
+
+**Контакты для эскалации:**
+- **Разработчик**: issues@github.com/bughouse-wizzard/openhands-monitor-bot
+- **Сообщество**: GitHub Discussions
+- **Экстренная поддержка**: Telegram канал проекта
 
 ## ❓ Часто задаваемые вопросы (FAQ)
 
