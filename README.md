@@ -6,6 +6,34 @@
 
 Мониторинговый бот для отслеживания задач в платформе OpenHands с отправкой уведомлений в Telegram.
 
+## 🚀 Быстрый старт
+
+### Установка и запуск за 5 минут
+
+```bash
+# 1. Клонируйте репозиторий
+git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
+cd openhands-monitor-bot
+
+# 2. Установите зависимости
+pip install -r requirements.txt
+
+# 3. Настройте переменные окружения
+export TELEGRAM_TOKEN="ваш_токен_бота"
+export CHAT_ID="ваш_chat_id"
+
+# 4. Запустите бота
+python bot.py
+```
+
+### Получение Telegram токена и Chat ID
+1. Создайте бота через [@BotFather](https://t.me/botfather)
+2. Добавьте бота в нужный чат/канал
+3. Получите Chat ID:
+```bash
+curl "https://api.telegram.org/bot<ВАШ_ТОКЕН>/getUpdates"
+```
+
 ## 📋 Содержание
 - [Обзор](#обзор)
 - [Установка](#установка)
@@ -52,12 +80,17 @@ OpenHands Monitor Bot — это система мониторинга, кото
 
 ### Установка зависимостей
 
-#### Способ 1: Установка через pip
+#### Способ 1: Установка через pip (все зависимости, включая тестовые)
 ```bash
 pip install -r requirements.txt
 ```
 
-#### Способ 2: Установка через Docker
+#### Способ 2: Установка только основных зависимостей
+```bash
+pip install python-telegram-bot httpx tenacity asyncio
+```
+
+#### Способ 3: Установка через Docker
 ```bash
 docker build -t openhands-monitor .
 ```
