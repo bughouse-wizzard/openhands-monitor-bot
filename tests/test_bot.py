@@ -584,3 +584,167 @@ def test_main_missing_environment_variables():
                 asyncio.run(bot.main())
             
             assert "TELEGRAM_TOKEN and CHAT_ID environment variables must be set" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_missing_title_field():
+    """Тест обработки бесед с отсутствующим полем title."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Сбрасываем глобальное состояние
+            bot.conversation_states.clear()
+            
+            # Мокаем fetch_conversations для возврата данных с отсутствующим title
+            mock_conversations = [
+                {"id": "1", "status": "active"}  # Отсутствует поле title
+            ]
+            
+            # Мокаем asyncio.sleep, чтобы прервать цикл после первой итерации
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = mock_conversations
+                    
+                    try:
+                        await bot.poll_and_notify()
+                    except Exception as e:
+                        if str(e) != "Break loop":
+                            raise
+            
+            # Проверяем, что сообщение было отправлено с заголовком "Untitled"
+            mock_bot_instance.send_message.assert_called_once()
+            call_args = mock_bot_instance.send_message.call_args
+            assert "Untitled" in call_args[1]['text']
+            assert "ID: 1" in call_args[1]['text']
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_missing_status_field():
+    """Тест обработки бесед с отсутствующим полем status."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Сбрасываем глобальное состояние
+            bot.conversation_states.clear()
+            
+            # Мокаем fetch_conversations для возврата данных с отсутствующим status
+            mock_conversations = [
+                {"id": "1", "title": "Test Task"}  # Отсутствует поле status
+            ]
+            
+            # Мокаем asyncio.sleep, чтобы прервать цикл после первой итерации
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = mock_conversations
+                    
+                    try:
+                        await bot.poll_and_notify()
+                    except Exception as e:
+                        if str(e) != "Break loop":
+                            raise
+            
+            # Проверяем, что сообщение было отправлено со статусом "UNKNOWN"
+            mock_bot_instance.send_message.assert_called_once()
+            call_args = mock_bot_instance.send_message.call_args
+            assert "Test Task" in call_args[1]['text']
+            # Проверяем, что статус был сохранен как "UNKNOWN"
+            assert bot.conversation_states["1"] == "UNKNOWN"
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_empty_fields():
+    """Тест обработки бесед с пустыми полями title и status."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Сбрасываем глобальное состояние
+            bot.conversation_states.clear()
+            
+            # Мокаем fetch_conversations для возврата данных с пустыми полями
+            mock_conversations = [
+                {"id": "1", "title": "", "status": ""}  # Пустые поля
+            ]
+            
+            # Мокаем asyncio.sleep, чтобы прервать цикл после первой итерации
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = mock_conversations
+                    
+                    try:
+                        await bot.poll_and_notify()
+                    except Exception as e:
+                        if str(e) != "Break loop":
+                            raise
+            
+            # Проверяем, что сообщение было отправлено
+            mock_bot_instance.send_message.assert_called_once()
+            # Пустые поля должны обрабатываться нормально (не заменяются на значения по умолчанию)
+            call_args = mock_bot_instance.send_message.call_args
+            assert "New Task Started:  (ID: 1)" in call_args[1]['text'] or "🆕 New Task Started:  (ID: 1)" in call_args[1]['text']
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_status_change_with_missing_title():
+    """Тест изменения статуса для беседы с отсутствующим заголовком."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Сбрасываем глобальное состояние и добавляем существующую беседу
+            bot.conversation_states.clear()
+            bot.conversation_states["1"] = "active"
+            
+            # Мокаем fetch_conversations для возврата данных с измененным статусом
+            mock_conversations = [
+                {"id": "1", "status": "completed"}  # Отсутствует title, статус изменился
+            ]
+            
+            # Мокаем asyncio.sleep, чтобы прервать цикл после первой итерации
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = mock_conversations
+                    
+                    try:
+                        await bot.poll_and_notify()
+                    except Exception as e:
+                        if str(e) != "Break loop":
+                            raise
+            
+            # Проверяем, что сообщение было отправлено с заголовком "Untitled"
+            mock_bot_instance.send_message.assert_called_once()
+            call_args = mock_bot_instance.send_message.call_args
+            assert "Untitled" in call_args[1]['text']
+            assert "is now completed" in call_args[1]['text']
+            # Проверяем, что статус был обновлен
+            assert bot.conversation_states["1"] == "completed"
