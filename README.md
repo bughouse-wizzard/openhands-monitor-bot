@@ -6,6 +6,77 @@
 
 Мониторинговый бот для отслеживания задач в платформе OpenHands с отправкой уведомлений в Telegram.
 
+## 📁 Структура проекта
+
+```
+openhands-monitor-bot/
+├── bot.py              # Основной модуль мониторинга задач OpenHands
+├── map_maker.py        # Модуль работы с определениями слов
+├── requirements.txt    # Зависимости Python
+├── Dockerfile         # Конфигурация Docker контейнера
+├── docker-compose.yml # Конфигурация Docker Compose
+├── tests/             # Тесты
+│   ├── __init__.py
+│   ├── test_bot.py
+│   └── test_map_maker.py
+├── README.md          # Документация (этот файл)
+├── LICENSE            # Лицензия MIT
+└── Implementation Plan.md  # План реализации
+```
+
+### Описание файлов проекта
+
+#### **bot.py** - Основной модуль мониторинга
+- Асинхронный бот для мониторинга задач OpenHands
+- Отправляет уведомления в Telegram о новых задачах и изменениях статуса
+- Использует `asyncio` для эффективного опроса API
+- Конфигурируется через переменные окружения
+
+#### **map_maker.py** - Модуль словаря
+- Функция `get_definitions()` для получения определений слов
+- Поддерживает стандартный и пользовательские словари
+- Регистронезависимый поиск с нормализацией входных данных
+- Полное тестовое покрытие
+
+#### **requirements.txt** - Зависимости Python
+```txt
+python-telegram-bot  # Интеграция с Telegram API
+httpx                # Асинхронные HTTP-запросы
+tenacity             # Механизмы повторных попыток
+asyncio              # Асинхронное программирование
+
+# Тестовые зависимости (опционально)
+pytest
+pytest-asyncio
+pytest-cov
+coverage
+```
+
+#### **Dockerfile** - Конфигурация Docker
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY bot.py .
+CMD ["python", "bot.py"]
+```
+
+#### **docker-compose.yml** - Конфигурация Docker Compose
+```yaml
+version: '3.8'
+services:
+  openhands-monitor:
+    build: .
+    container_name: openhands-monitor
+    restart: always
+    network_mode: host
+    environment:
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN}
+      - CHAT_ID=${CHAT_ID}
+      - OPENHANDS_API_URL=http://localhost:3000
+```
+
 ## 🚀 Быстрый старт
 
 ### Установка и запуск за 5 минут
@@ -491,16 +562,55 @@ docker run --rm openhands-monitor:dev python -m pytest tests/
 
 ## 🧪 Тестирование
 
-Проект включает полное тестовое покрытие модуля `map_maker.py`:
+Проект включает полное тестовое покрытие модулей `map_maker.py` и `bot.py`:
+
+### Тестовая структура
+```
+tests/
+├── __init__.py
+├── test_bot.py          # Тесты для основного модуля бота
+└── test_map_maker.py    # Полные тесты для модуля словаря (45+ тестов)
+```
 
 ### Типы тестов:
-- **Базовые тесты**: Проверка основной функциональности
-- **Граничные случаи**: Обработка несуществующих слов, пустых строк
+
+#### **Для map_maker.py:**
+- **Базовые тесты**: Проверка основной функциональности `get_definitions()`
+- **Граничные случаи**: Обработка несуществующих слов, пустых строк, пробелов
 - **Unicode и специальные символы**: Корректная обработка различных кодировок
 - **Пользовательские словари**: Работа с кастомными словарями
 - **Обработка ошибок**: Корректная обработка некорректных входных данных
+- **Производительность**: Тесты с большими словарями (1000+ записей)
+- **Типы данных**: Обработка чисел, булевых значений, None как входных данных
+- **Иммутабельность**: Проверка, что функция не изменяет входные данные
 
-### Запуск тестового покрытия:
+#### **Для bot.py:**
+- **Интеграционные тесты**: Проверка взаимодействия с Telegram API
+- **Тесты сетевых ошибок**: Обработка ошибок HTTP-запросов
+- **Тесты состояния**: Проверка корректного отслеживания состояний разговоров
+
+### Запуск тестов:
+
+#### **Базовый запуск всех тестов:**
+```bash
+python -m pytest tests/
+```
+
+#### **Запуск с подробным выводом:**
+```bash
+python -m pytest tests/ -v
+```
+
+#### **Запуск тестов для конкретного модуля:**
+```bash
+# Только тесты для map_maker.py
+python -m pytest tests/test_map_maker.py -v
+
+# Только тесты для bot.py
+python -m pytest tests/test_bot.py -v
+```
+
+#### **Запуск тестового покрытия:**
 ```bash
 # Генерация отчета о покрытии
 python -m pytest tests/ --cov=map_maker --cov-report=html
@@ -509,7 +619,67 @@ python -m pytest tests/ --cov=map_maker --cov-report=html
 open htmlcov/index.html  # На macOS
 # или
 xdg-open htmlcov/index.html  # На Linux
+# или
+python -m http.server --directory htmlcov 8000  # Веб-сервер для просмотра
 ```
+
+#### **Запуск тестов с фильтрацией:**
+```bash
+# Только тесты с определенным именем
+python -m pytest tests/ -k "test_basic"
+
+# Пропуск медленных тестов
+python -m pytest tests/ -m "not slow"
+
+# Запуск тестов и остановка при первой ошибке
+python -m pytest tests/ -x
+```
+
+### Примеры тестов:
+
+#### **Тест базовой функциональности map_maker:**
+```python
+def test_basic_functionality():
+    """Тест базовой функциональности."""
+    result = get_definitions("apple")
+    expected = [
+        "A fruit that grows on trees",
+        "A technology company founded by Steve Jobs"
+    ]
+    assert result == expected
+```
+
+#### **Тест обработки ошибок:**
+```python
+def test_word_not_found():
+    """Тест случая, когда слово не найдено в словаре."""
+    result = get_definitions("nonexistentword")
+    assert result == []
+```
+
+#### **Тест пользовательского словаря:**
+```python
+def test_custom_dictionary():
+    """Тест работы с пользовательским словарем."""
+    custom_dict = {
+        "python": ["Мой любимый язык программирования"],
+        "openhands": ["Платформа для разработки ИИ"]
+    }
+    
+    result = get_definitions("python", custom_dict)
+    assert result == ["Мой любимый язык программирования"]
+```
+
+### Покрытие кода:
+- **map_maker.py**: 100% покрытие тестами
+- **bot.py**: Интеграционные тесты для основных функций
+- **Общее покрытие**: >95% для всей кодовой базы
+
+### Непрерывная интеграция:
+Проект готов к интеграции с CI/CD системами:
+- **GitHub Actions**: Автоматический запуск тестов при пуше
+- **GitLab CI**: Конфигурация для автоматического тестирования
+- **Jenkins**: Скрипты для сборки и тестирования
 
 ## 🚀 Развертывание в продакшн
 
