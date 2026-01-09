@@ -37,6 +37,8 @@ async def fetch_conversations():
             print(f"HTTP error fetching conversations: {e}")
         except httpx.RequestError as e:
             print(f"Request error fetching conversations: {e}")
+        except ValueError as e:
+            print(f"JSON parsing error fetching conversations: {e}")
         return None
 
 async def poll_and_notify():
