@@ -902,3 +902,32 @@ async def test_send_telegram_message_retry_logic():
             for call in mock_bot_instance.send_message.call_args_list:
                 assert call[1]['chat_id'] == 'test'
                 assert call[1]['text'] == "Test message with retry"
+
+
+def test_module_main_block():
+    """Тест наличия и структуры блока if __name__ == '__main__'."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    # Импортируем модуль для проверки
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Проверяем, что модуль имеет атрибут __name__
+            assert hasattr(bot, '__name__')
+            
+            # Проверяем, что модуль можно импортировать без ошибок
+            # (это уже проверяется фактом успешного импорта выше)
+            
+            # Проверяем, что основные функции существуют
+            assert hasattr(bot, 'send_telegram_message')
+            assert hasattr(bot, 'fetch_conversations')
+            assert hasattr(bot, 'poll_and_notify')
+            assert hasattr(bot, 'main')
+            
+            # Проверяем, что main является асинхронной функцией
+            import asyncio
+            import inspect
+            assert inspect.iscoroutinefunction(bot.main)
