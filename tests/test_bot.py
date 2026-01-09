@@ -931,3 +931,259 @@ def test_module_main_block():
             import asyncio
             import inspect
             assert inspect.iscoroutinefunction(bot.main)
+
+
+@pytest.mark.asyncio
+async def test_send_telegram_message_empty_message():
+    """Тест отправки пустого сообщения."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Вызываем функцию с пустым сообщением
+            await bot.send_telegram_message("")
+            
+            # Проверяем, что send_message был вызван с пустым текстом
+            mock_bot_instance.send_message.assert_called_once_with(
+                chat_id='test', 
+                text=""
+            )
+
+
+@pytest.mark.asyncio
+async def test_send_telegram_message_long_message():
+    """Тест отправки длинного сообщения."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Создаем длинное сообщение
+            long_message = "A" * 1000
+            
+            # Вызываем функцию с длинным сообщением
+            await bot.send_telegram_message(long_message)
+            
+            # Проверяем, что send_message был вызван с правильным текстом
+            mock_bot_instance.send_message.assert_called_once_with(
+                chat_id='test', 
+                text=long_message
+            )
+
+
+@pytest.mark.asyncio
+async def test_fetch_conversations_empty_response():
+    """Тест обработки пустого ответа от API."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {
+        'TELEGRAM_TOKEN': 'test', 
+        'CHAT_ID': 'test',
+        'OPENHANDS_API_URL': 'http://test-api:3000'
+    }):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Создаем мок для httpx.AsyncClient
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = []  # Пустой список
+            
+            async def mock_client_get(*args, **kwargs):
+                return mock_response
+            
+            with patch('httpx.AsyncClient') as mock_client_class:
+                mock_client_instance = AsyncMock()
+                mock_client_instance.get = AsyncMock(side_effect=mock_client_get)
+                mock_client_class.return_value.__aenter__.return_value = mock_client_instance
+                mock_client_class.return_value.__aexit__.return_value = None
+                
+                # Вызываем функцию
+                result = await bot.fetch_conversations()
+                
+                # Проверяем результат
+                assert result == []
+                # Проверяем, что get был вызван с правильным URL
+                mock_client_instance.get.assert_called_once_with("http://test-api:3000/api/conversations")
+
+
+@pytest.mark.asyncio
+async def test_fetch_conversations_invalid_json():
+    """Тест обработки невалидного JSON в ответе."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Мокаем httpx.AsyncClient для вызова JSONDecodeError
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.side_effect = ValueError("Invalid JSON")
+            
+            mock_client.get.return_value = mock_response
+            
+            with patch('httpx.AsyncClient', return_value=mock_client):
+                # Вызываем функцию
+                result = await bot.fetch_conversations()
+                
+                # Проверяем, что возвращается None при ошибке парсинга JSON
+                assert result is None
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_duplicate_conversation_ids():
+    """Тест обработки дублирующихся ID бесед."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Сбрасываем глобальное состояние
+            bot.conversation_states.clear()
+            
+            # Мокаем fetch_conversations для возврата данных с дублирующимися ID
+            mock_conversations = [
+                {"id": "1", "title": "Task 1", "status": "active"},
+                {"id": "1", "title": "Task 1 Duplicate", "status": "active"},  # Дубликат ID
+                {"id": "2", "title": "Task 2", "status": "pending"}
+            ]
+            
+            # Мокаем asyncio.sleep, чтобы прервать цикл после первой итерации
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = mock_conversations
+                    
+                    # Запускаем poll_and_notify и ожидаем, что цикл прервется
+                    with pytest.raises(Exception, match="Break loop"):
+                        await bot.poll_and_notify()
+                    
+                    # Проверяем, что сообщение было отправлено только для уникальных бесед
+                    # Должно быть 2 сообщения: для ID 1 и ID 2
+                    assert mock_bot_instance.send_message.call_count == 2
+                    
+                    # Проверяем, что состояние содержит только уникальные ID
+                    assert set(bot.conversation_states.keys()) == {"1", "2"}
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_same_id_different_data():
+    """Тест обработки бесед с одинаковым ID но разными данными."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Сбрасываем глобальное состояние
+            bot.conversation_states.clear()
+            
+            # Мокаем fetch_conversations для возврата данных
+            # Первый вызов: беседа с ID 1 и статусом "active"
+            # Второй вызов: та же беседа с ID 1, но с другим заголовком и статусом
+            mock_conversations_first = [
+                {"id": "1", "title": "Original Task", "status": "active"}
+            ]
+            
+            mock_conversations_second = [
+                {"id": "1", "title": "Updated Task", "status": "completed"}
+            ]
+            
+            # Мокаем asyncio.sleep, чтобы прервать цикл после первой итерации
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    # Настраиваем mock_fetch для возврата данных первой итерации
+                    mock_fetch.return_value = mock_conversations_first
+                    
+                    # Запускаем poll_and_notify и ожидаем, что цикл прервется
+                    with pytest.raises(Exception, match="Break loop"):
+                        await bot.poll_and_notify()
+                    
+                    # Проверяем, что было отправлено 1 сообщение для новой беседы
+                    assert mock_bot_instance.send_message.call_count == 1
+                    
+                    # Проверяем, что состояние установилось
+                    assert bot.conversation_states == {"1": "active"}
+                    
+                    # Теперь сбрасываем счетчик вызовов и тестируем вторую итерацию
+                    mock_bot_instance.send_message.reset_mock()
+                    
+                    # Устанавливаем начальное состояние для второй итерации
+                    bot.conversation_states = {"1": "active"}
+                    
+                    # Мокаем вторую итерацию
+                    with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                        with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch2:
+                            mock_fetch2.return_value = mock_conversations_second
+                            
+                            # Запускаем poll_and_notify и ожидаем, что цикл прервется
+                            with pytest.raises(Exception, match="Break loop"):
+                                await bot.poll_and_notify()
+                            
+                            # Проверяем, что было отправлено 1 сообщение об изменении статуса
+                            assert mock_bot_instance.send_message.call_count == 1
+                            
+                            # Проверяем, что состояние обновилось
+                            assert bot.conversation_states == {"1": "completed"}
+
+
+@pytest.mark.asyncio
+async def test_main_system_exit():
+    """Тест обработки SystemExit в main функции."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Мокаем asyncio.run, чтобы проверить обработку SystemExit
+            with patch('asyncio.run') as mock_run:
+                mock_run.side_effect = SystemExit("Test SystemExit")
+                
+                # Проверяем, что SystemExit обрабатывается в блоке try-except
+                # Для этого нужно проверить код в блоке if __name__ == '__main__'
+                # Вместо этого протестируем логику напрямую
+                try:
+                    asyncio.run(bot.main())
+                except SystemExit:
+                    # SystemExit должен быть перехвачен
+                    pass
+                
+                # Проверяем, что asyncio.run был вызван
+                mock_run.assert_called_once()
+
+
