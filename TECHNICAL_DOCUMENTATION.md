@@ -650,3 +650,578 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
 ```
+
+## Monitoring and Logging
+
+### Logging Configuration
+
+#### Log Levels
+- **INFO**: Normal operational messages
+- **WARNING**: Non-critical issues that may require attention
+- **ERROR**: Critical errors that affect functionality
+- **DEBUG**: Detailed debugging information (enable for troubleshooting)
+
+#### Log Output
+```python
+# Example log output format
+2026-01-09 12:30:45 INFO - Starting polling loop...
+2026-01-09 12:30:50 INFO - Fetched 5 conversations from API
+2026-01-09 12:30:50 INFO - New task detected: "Разработка нового функционала"
+2026-01-09 12:30:51 INFO - Telegram notification sent successfully
+2026-01-09 12:30:55 WARNING - API request timeout, retrying...
+2026-01-09 12:30:57 ERROR - Failed to send Telegram message after 3 attempts
+```
+
+### Monitoring Metrics
+
+#### Key Performance Indicators (KPIs)
+1. **API Response Time**: Time to fetch conversations from OpenHands API
+2. **Notification Success Rate**: Percentage of successful Telegram message deliveries
+3. **Polling Interval Consistency**: Consistency of polling intervals
+4. **Memory Usage**: RAM consumption over time
+5. **Error Rate**: Frequency of different error types
+
+#### Health Checks
+```bash
+# Basic health check
+curl http://localhost:3000/health  # If health endpoint exists
+
+# Container health check
+docker inspect openhands-monitor --format='{{.State.Health.Status}}'
+
+# Process health check
+ps aux | grep "python bot.py" | grep -v grep
+```
+
+### Log Management
+
+#### Log Rotation
+```bash
+# Manual log rotation
+docker logs openhands-monitor > bot_$(date +%Y%m%d).log
+docker-compose logs --no-color > logs_$(date +%Y%m%d_%H%M%S).txt
+
+# Automated log rotation with logrotate
+# /etc/logrotate.d/openhands-monitor
+/var/log/openhands-monitor/*.log {
+    daily
+    rotate 7
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 644 root root
+}
+```
+
+#### Centralized Logging
+- **ELK Stack**: Elasticsearch, Logstash, Kibana
+- **Splunk**: Enterprise log management
+- **Graylog**: Open-source log management
+- **Cloud Services**: AWS CloudWatch, Google Cloud Logging, Azure Monitor
+
+## Security Considerations
+
+### Security Best Practices
+
+#### 1. Secret Management
+- **Never commit secrets** to version control
+- Use environment variables or secret managers (Hashicorp Vault, AWS Secrets Manager)
+- Rotate Telegram tokens regularly
+- Use different tokens for development and production
+
+#### 2. Network Security
+- Use HTTPS for all API endpoints
+- Implement firewall rules to restrict access
+- Use VPN for internal API access
+- Monitor network traffic for anomalies
+
+#### 3. Container Security
+- Run containers as non-root users
+- Use minimal base images
+- Regularly update base images and dependencies
+- Scan images for vulnerabilities
+- Implement resource limits
+
+#### 4. API Security
+- Validate all API responses
+- Implement rate limiting
+- Use API keys or tokens for authentication
+- Monitor API usage patterns
+
+### Security Configuration Examples
+
+#### Secure Docker Compose Configuration
+```yaml
+version: '3.8'
+services:
+  openhands-monitor:
+    build: .
+    container_name: openhands-monitor-secure
+    user: "1000:1000"  # Non-root user
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - "127.0.0.1:3000:3000"  # Localhost binding only
+    environment:
+      - TELEGRAM_TOKEN_FILE=/run/secrets/telegram_token
+      - CHAT_ID_FILE=/run/secrets/chat_id
+    secrets:
+      - telegram_token
+      - chat_id
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=unconfined
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+secrets:
+  telegram_token:
+    file: ./secrets/telegram_token.txt
+  chat_id:
+    file: ./secrets/chat_id.txt
+```
+
+#### Security Scanning
+```bash
+# Scan Docker image for vulnerabilities
+docker scan openhands-monitor
+
+# Check for outdated dependencies
+pip list --outdated
+
+# Security audit with bandit
+pip install bandit
+bandit -r . -f json -o bandit-report.json
+```
+
+## Performance Optimization
+
+### Optimization Strategies
+
+#### 1. Polling Optimization
+- **Adjust Polling Interval**: Increase from 5 seconds to 30-60 seconds for production
+- **Implement Exponential Backoff**: For API failures
+- **Batch Processing**: Process multiple conversations in batches
+- **Caching**: Cache API responses when appropriate
+
+#### 2. Memory Optimization
+- **State Management**: Implement periodic state cleanup
+- **Connection Pooling**: Reuse HTTP connections
+- **Garbage Collection**: Configure Python garbage collection
+- **Memory Limits**: Set container memory limits
+
+#### 3. Network Optimization
+- **Connection Keep-Alive**: Reuse TCP connections
+- **Compression**: Enable HTTP compression
+- **DNS Caching**: Cache DNS lookups
+- **Timeout Configuration**: Optimize timeout values
+
+### Performance Monitoring
+
+#### Resource Monitoring
+```bash
+# Monitor container resources
+docker stats openhands-monitor
+
+# Monitor process resources
+top -p $(pgrep -f "python bot.py")
+
+# Monitor network connections
+netstat -tulpn | grep python
+```
+
+#### Performance Testing
+```bash
+# Load testing with Apache Bench
+ab -n 1000 -c 10 http://localhost:3000/api/conversations
+
+# Memory profiling with memory_profiler
+python -m memory_profiler bot.py
+
+# CPU profiling with cProfile
+python -m cProfile -o profile.stats bot.py
+```
+
+### Scaling Strategies
+
+#### Horizontal Scaling
+```yaml
+# Docker Swarm scaling
+docker service scale openhands-monitor=3
+
+# Kubernetes scaling
+kubectl scale deployment openhands-monitor --replicas=3
+```
+
+#### Load Balancing
+- **Round Robin**: Distribute requests evenly
+- **Least Connections**: Send to server with fewest connections
+- **Session Affinity**: Maintain user sessions on same server
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### Issue 1: Bot Won't Start
+**Symptoms**: Bot fails to start or exits immediately
+**Possible Causes**:
+1. Missing environment variables
+2. Invalid Telegram token
+3. Network connectivity issues
+
+**Solutions**:
+```bash
+# Check environment variables
+echo "TELEGRAM_TOKEN: $TELEGRAM_TOKEN"
+echo "CHAT_ID: $CHAT_ID"
+
+# Test Telegram API
+curl "https://api.telegram.org/bot${TELEGRAM_TOKEN}/getMe"
+
+# Test OpenHands API connectivity
+curl "${OPENHANDS_API_URL}/api/conversations"
+```
+
+#### Issue 2: No Telegram Notifications
+**Symptoms**: Bot runs but no messages received
+**Possible Causes**:
+1. Incorrect Chat ID
+2. Bot not added to chat
+3. Telegram API issues
+
+**Solutions**:
+```bash
+# Verify Chat ID
+curl "https://api.telegram.org/bot${TELEGRAM_TOKEN}/getUpdates"
+
+# Check bot permissions
+# Ensure bot has permission to send messages in the chat
+```
+
+#### Issue 3: High Resource Usage
+**Symptoms**: High CPU or memory consumption
+**Possible Causes**:
+1. Too frequent polling (5-second interval)
+2. Memory leaks
+3. Large conversation sets
+
+**Solutions**:
+```bash
+# Increase polling interval (edit bot.py)
+# Change POLL_INTERVAL from 5 to 30 seconds
+
+# Monitor resource usage
+docker stats openhands-monitor
+
+# Restart container periodically
+docker restart openhands-monitor
+```
+
+#### Issue 4: API Connection Errors
+**Symptoms**: Frequent timeouts or connection errors
+**Possible Causes**:
+1. Network issues
+2. API downtime
+3. Firewall restrictions
+
+**Solutions**:
+```bash
+# Test network connectivity
+ping $(echo $OPENHANDS_API_URL | sed 's|http://||' | sed 's|https://||' | cut -d/ -f1)
+
+# Check API status
+curl -I $OPENHANDS_API_URL
+
+# Implement retry logic (already built-in)
+```
+
+### Debug Mode
+
+#### Enable Debug Logging
+```bash
+# Run with debug output
+export PYTHONUNBUFFERED=1
+python -u bot.py 2>&1 | tee debug.log
+
+# Or with increased verbosity
+python -c "import logging; logging.basicConfig(level=logging.DEBUG)" bot.py
+```
+
+#### Interactive Debugging
+```python
+# Add debug statements to bot.py
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Or use pdb for interactive debugging
+import pdb
+pdb.set_trace()  # Add this line where you want to debug
+```
+
+## Development Guidelines
+
+### Code Standards
+
+#### Python Style Guide
+- Follow [PEP 8](https://www.python.org/dev/peps/pep-0008/) conventions
+- Use meaningful variable and function names
+- Add docstrings for all public functions and classes
+- Keep functions small and focused (single responsibility)
+
+#### Example Code Structure
+```python
+def process_conversation(conversation: dict) -> str:
+    """
+    Process a single conversation and return notification message.
+    
+    Args:
+        conversation (dict): Conversation data from API
+        
+    Returns:
+        str: Formatted notification message
+        
+    Raises:
+        ValueError: If conversation data is invalid
+    """
+    if not conversation.get("id"):
+        raise ValueError("Conversation must have an ID")
+    
+    title = conversation.get("title", "Untitled")
+    conv_id = conversation["id"]
+    
+    return f"🆕 New Task Started: {title} (ID: {conv_id})"
+```
+
+### Project Structure
+
+#### Recommended Structure
+```
+openhands-monitor-bot/
+├── src/                    # Source code
+│   ├── __init__.py
+│   ├── bot.py             # Main bot module
+│   ├── map_maker.py       # Dictionary module
+│   └── utils/             # Utility functions
+│       ├── __init__.py
+│       ├── logging.py     # Logging configuration
+│       └── config.py      # Configuration management
+├── tests/                  # Test files
+│   ├── __init__.py
+│   ├── test_bot.py
+│   └── test_map_maker.py
+├── docs/                   # Documentation
+│   ├── api.md
+│   └── deployment.md
+├── scripts/                # Utility scripts
+│   ├── setup.sh
+│   └── deploy.sh
+├── Dockerfile             # Docker configuration
+├── docker-compose.yml     # Docker Compose configuration
+├── requirements.txt       # Python dependencies
+├── .env.example          # Example environment variables
+├── .gitignore            # Git ignore rules
+├── README.md             # Project documentation
+└── TECHNICAL_DOCUMENTATION.md  # This file
+```
+
+### Development Workflow
+
+#### 1. Setup Development Environment
+```bash
+# Clone repository
+git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
+cd openhands-monitor-bot
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
+# Install development dependencies
+pip install -r requirements.txt
+pip install -e .  # Install in development mode
+```
+
+#### 2. Make Changes
+```bash
+# Create feature branch
+git checkout -b feature/new-feature
+
+# Make code changes
+# Add tests for new functionality
+# Update documentation
+```
+
+#### 3. Test Changes
+```bash
+# Run tests
+python -m pytest tests/ -v
+
+# Check code style
+pip install black flake8
+black src/ tests/
+flake8 src/ tests/
+
+# Run type checking (optional)
+pip install mypy
+mypy src/
+```
+
+#### 4. Submit Changes
+```bash
+# Commit changes
+git add .
+git commit -m "Add new feature: description"
+
+# Push to remote
+git push origin feature/new-feature
+
+# Create pull request
+# Wait for code review and CI checks
+```
+
+### Dependency Management
+
+#### Updating Dependencies
+```bash
+# Update all dependencies
+pip install --upgrade -r requirements.txt
+
+# Generate new requirements.txt
+pip freeze > requirements.txt
+
+# Check for security vulnerabilities
+pip install safety
+safety check -r requirements.txt
+```
+
+#### Version Pinning
+```txt
+# requirements.txt with version pinning
+python-telegram-bot==20.7
+httpx==0.25.2
+tenacity==8.2.3
+pytest==7.4.4
+pytest-asyncio==0.21.1
+```
+
+## Contributing
+
+### Contribution Guidelines
+
+#### How to Contribute
+1. **Fork the repository** on GitHub
+2. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+3. **Make your changes** and add tests
+4. **Run the test suite**: `python -m pytest tests/`
+5. **Ensure code quality**: Follow PEP 8 and add docstrings
+6. **Submit a pull request** with clear description
+
+#### Code Review Process
+1. **Automated Checks**: CI/CD pipeline runs tests and checks
+2. **Manual Review**: Maintainers review code for quality and functionality
+3. **Feedback**: Address any feedback or requested changes
+4. **Merge**: Once approved, changes are merged to main branch
+
+### Issue Reporting
+
+#### Bug Reports
+When reporting bugs, include:
+- **Description**: Clear description of the issue
+- **Steps to Reproduce**: Exact steps to reproduce the issue
+- **Expected Behavior**: What you expected to happen
+- **Actual Behavior**: What actually happened
+- **Environment**: Python version, OS, dependencies
+- **Logs**: Relevant error logs or screenshots
+
+#### Feature Requests
+When requesting features, include:
+- **Use Case**: How the feature would be used
+- **Benefits**: Why the feature is valuable
+- **Implementation Ideas**: Suggestions for implementation (optional)
+- **Alternatives**: Any alternative solutions considered
+
+### Community Guidelines
+
+#### Code of Conduct
+- **Be respectful**: Treat all contributors with respect
+- **Be inclusive**: Welcome contributors from all backgrounds
+- **Be constructive**: Provide constructive feedback
+- **Be patient**: Allow time for review and discussion
+
+#### Communication Channels
+- **GitHub Issues**: For bug reports and feature requests
+- **Pull Requests**: For code contributions
+- **Documentation**: For improving documentation
+- **Discussions**: For questions and discussions (if enabled)
+
+### Recognition
+
+#### Contributors
+All contributors are recognized in:
+- **GitHub Contributors list**
+- **Project README** (for significant contributions)
+- **Release notes** (for each release)
+
+#### Attribution
+When using code from this project:
+- **Credit the original authors**
+- **Include the MIT license**
+- **Link to the original repository**
+
+---
+
+## Conclusion
+
+This technical documentation provides comprehensive guidance for installing, configuring, using, and maintaining the OpenHands Monitor Bot. The documentation covers:
+
+1. **Project Overview**: Understanding the system architecture and components
+2. **Installation**: Multiple installation methods for different environments
+3. **Configuration**: Environment variables and application settings
+4. **API Documentation**: Detailed API reference for all functions
+5. **Testing**: Comprehensive testing strategy and procedures
+6. **Docker Deployment**: Containerized deployment with security best practices
+7. **Monitoring**: Logging, monitoring, and performance optimization
+8. **Security**: Security considerations and hardening guidelines
+9. **Troubleshooting**: Common issues and solutions
+10. **Development**: Guidelines for contributing and extending the project
+
+### Maintenance and Updates
+
+#### Regular Maintenance Tasks
+- **Weekly**: Check for dependency updates
+- **Monthly**: Review logs and performance metrics
+- **Quarterly**: Security audit and vulnerability scanning
+- **Annually**: Major version review and architecture assessment
+
+#### Update Procedures
+1. **Backup**: Always backup configuration and data before updates
+2. **Test**: Test updates in staging environment first
+3. **Document**: Update documentation with changes
+4. **Communicate**: Notify users of breaking changes
+5. **Monitor**: Closely monitor after deployment
+
+### Support
+
+#### Getting Help
+- **Documentation**: First check this documentation and README
+- **GitHub Issues**: Report bugs or ask questions
+- **Community**: Engage with other users (if community exists)
+
+#### Professional Support
+For enterprise or professional support needs:
+- **Custom Development**: Feature development and customization
+- **Integration**: Integration with other systems
+- **Consulting**: Architecture and deployment consulting
+- **Training**: Team training and knowledge transfer
+
+---
+
+*Documentation Version: 1.0.0*  
+*Last Updated: 2026-01-09*  
+*Maintained by: OpenHands Development Team*
