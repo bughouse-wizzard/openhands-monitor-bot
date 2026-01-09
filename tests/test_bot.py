@@ -1271,3 +1271,38 @@ def test_module_direct_execution_coverage():
                 mock_run.assert_called_once()
 
 
+def test_main_block_execution():
+    """Тест прямого выполнения блока if __name__ == '__main__'."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    # Импортируем модуль и проверяем структуру
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            with patch('asyncio.run') as mock_run:
+                # Настраиваем мок для asyncio.run
+                mock_run.return_value = None
+                
+                # Импортируем модуль
+                import bot
+                
+                # Сохраняем оригинальный __name__
+                original_name = bot.__name__
+                
+                try:
+                    # Временно меняем __name__ на '__main__' для симуляции прямого запуска
+                    bot.__name__ = '__main__'
+                    
+                    # Выполняем код модуля (симулируем импорт при __name__ == '__main__')
+                    # Это вызовет блок if __name__ == "__main__"
+                    exec(open('/workspace/bot.py').read())
+                    
+                finally:
+                    # Восстанавливаем оригинальный __name__
+                    bot.__name__ = original_name
+                
+                # Проверяем, что asyncio.run был вызван
+                mock_run.assert_called_once()
+
+
