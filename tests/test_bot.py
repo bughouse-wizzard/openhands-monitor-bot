@@ -1271,3 +1271,46 @@ def test_module_direct_execution_coverage():
                 mock_run.assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_poll_and_notify_missing_id_field():
+    """Тест обработки бесед с отсутствующим полем id."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Сбрасываем глобальное состояние
+            bot.conversation_states.clear()
+            
+            # Мокаем fetch_conversations для возврата данных с отсутствующим id
+            mock_conversations = [
+                {"title": "Task 1", "status": "active"},  # Отсутствует поле id
+                {"id": "2", "title": "Task 2", "status": "pending"},  # Корректные данные
+                {"title": "Task 3", "status": "completed"}  # Отсутствует поле id
+            ]
+            
+            # Мокаем asyncio.sleep, чтобы прервать цикл после первой итерации
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = mock_conversations
+                    
+                    # Запускаем poll_and_notify и ожидаем, что цикл прервется
+                    with pytest.raises(Exception, match="Break loop"):
+                        await bot.poll_and_notify()
+                    
+                    # Проверяем, что только беседа с id=2 была обработана
+                    assert "2" in bot.conversation_states
+                    assert bot.conversation_states["2"] == "pending"
+                    assert len(bot.conversation_states) == 1
+                    
+                    # Проверяем, что сообщение было отправлено только для беседы с id=2
+                    mock_bot_instance.send_message.assert_called_once_with(
+                        chat_id='test',
+                        text="🆕 New Task Started: Task 2 (ID: 2)"
+                    )

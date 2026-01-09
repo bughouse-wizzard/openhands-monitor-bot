@@ -54,7 +54,10 @@ async def poll_and_notify():
 
         current_ids = set()
         for conv in conversations:
-            conv_id = conv["id"]
+            conv_id = conv.get("id")
+            if conv_id is None:
+                print("Warning: Conversation missing 'id' field, skipping")
+                continue
             title = conv.get("title", "Untitled")
             status = conv.get("status", "UNKNOWN")
             current_ids.add(conv_id)
