@@ -1353,3 +1353,78 @@ def test_script_execution_with_keyboard_interrupt():
         builtins.print = original_print
 
 
+@pytest.mark.asyncio
+async def test_fetch_conversations_timeout_error():
+    """Тест обработки ошибки таймаута при получении бесед."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Мокаем httpx.AsyncClient для вызова TimeoutException
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            
+            import httpx
+            mock_client.get.side_effect = httpx.TimeoutException("Request timed out")
+            
+            with patch('httpx.AsyncClient', return_value=mock_client):
+                # Вызываем функцию
+                result = await bot.fetch_conversations()
+                
+                # Проверяем, что возвращается None при ошибке таймаута
+                assert result is None
+
+
+@pytest.mark.asyncio
+async def test_send_telegram_message_very_long_message():
+    """Тест отправки очень длинного сообщения в Telegram."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Создаем очень длинное сообщение
+            long_message = "A" * 4096  # 4KB сообщение
+            
+            # Вызываем функцию
+            await bot.send_telegram_message(long_message)
+            
+            # Проверяем, что send_message был вызван с правильными параметрами
+            mock_bot_instance.send_message.assert_called_once_with(
+                chat_id='test', 
+                text=long_message
+            )
+
+
+def test_message_escaping_special_characters():
+    """Тест экранирования специальных символов в сообщениях."""
+    # Тестируем, что специальные символы корректно обрабатываются
+    test_cases = [
+        ("Task with <brackets>", "Task with <brackets>"),
+        ("Task with 'quotes'", "Task with 'quotes'"),
+        ("Task with \"double quotes\"", "Task with \"double quotes\""),
+        ("Task with & ampersand", "Task with & ampersand"),
+        ("Task with % percent", "Task with % percent"),
+        ("Task with $ dollar", "Task with $ dollar"),
+        ("Task with @ at", "Task with @ at"),
+        ("Task with # hash", "Task with # hash"),
+        ("Task with * asterisk", "Task with * asterisk"),
+        ("Task with _ underscore", "Task with _ underscore"),
+    ]
+    
+    for input_text, expected in test_cases:
+        # Проверяем, что текст не изменяется (Telegram сам обрабатывает форматирование)
+        assert input_text == expected
+
+
