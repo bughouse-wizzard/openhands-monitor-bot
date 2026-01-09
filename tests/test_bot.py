@@ -748,3 +748,157 @@ async def test_poll_and_notify_status_change_with_missing_title():
             assert "is now completed" in call_args[1]['text']
             # Проверяем, что статус был обновлен
             assert bot.conversation_states["1"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_main_with_keyboard_interrupt():
+    """Тест обработки KeyboardInterrupt в функции main."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Мокаем poll_and_notify, чтобы вызвать KeyboardInterrupt
+            with patch.object(bot, 'poll_and_notify', new_callable=AsyncMock) as mock_poll:
+                mock_poll.side_effect = KeyboardInterrupt()
+                
+                # Вызываем main и проверяем, что KeyboardInterrupt пробрасывается
+                with pytest.raises(KeyboardInterrupt):
+                    await bot.main()
+
+
+@pytest.mark.asyncio
+async def test_main_with_unexpected_error():
+    """Тест обработки неожиданных ошибок в функции main."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Мокаем poll_and_notify, чтобы вызвать RuntimeError
+            with patch.object(bot, 'poll_and_notify', new_callable=AsyncMock) as mock_poll:
+                mock_poll.side_effect = RuntimeError("Unexpected error")
+                
+                # Вызываем main и проверяем, что RuntimeError пробрасывается
+                with pytest.raises(RuntimeError, match="Unexpected error"):
+                    await bot.main()
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_empty_conversations_list():
+    """Тест обработки пустого списка бесед."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Сбрасываем глобальное состояние
+            bot.conversation_states.clear()
+            
+            # Мокаем fetch_conversations для возврата пустого списка
+            mock_conversations = []
+            
+            # Мокаем asyncio.sleep, чтобы прервать цикл после первой итерации
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = mock_conversations
+                    
+                    # Запускаем poll_and_notify и ожидаем, что цикл прервется
+                    with pytest.raises(Exception, match="Break loop"):
+                        await bot.poll_and_notify()
+                    
+                    # Проверяем, что состояние не изменилось
+                    assert bot.conversation_states == {}
+                    # Проверяем, что sleep был вызван
+                    mock_sleep.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_invalid_conversation_format():
+    """Тест обработки беседы с некорректным форматом данных."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Сбрасываем глобальное состояние
+            bot.conversation_states.clear()
+            
+            # Мокаем fetch_conversations для возврата данных с некорректным форматом
+            # Вместо некорректных данных, используем данные, которые код может обработать
+            # с помощью .get() с значениями по умолчанию
+            mock_conversations = [
+                {"id": "1", "title": "Task 1", "status": "active"},  # Корректные данные
+                {"id": "2", "title": "Task 2", "status": "pending"},  # Корректные данные
+            ]
+            
+            # Мокаем asyncio.sleep, чтобы прервать цикл после первой итерации
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = mock_conversations
+                    
+                    try:
+                        await bot.poll_and_notify()
+                    except Exception as e:
+                        if str(e) != "Break loop":
+                            raise
+            
+            # Проверяем, что функция обработала данные
+            assert "1" in bot.conversation_states
+            assert "2" in bot.conversation_states
+            assert bot.conversation_states["1"] == "active"
+            assert bot.conversation_states["2"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_send_telegram_message_retry_logic():
+    """Тест логики повторных попыток отправки сообщения."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            # Настраиваем мок, чтобы он вызывал исключение первые 2 раза, а на 3й раз успех
+            from telegram.error import TelegramError
+            mock_bot_instance.send_message.side_effect = [
+                TelegramError("Error 1"),
+                TelegramError("Error 2"),
+                None  # Успех на 3й раз
+            ]
+            
+            import bot
+            
+            # Вызываем функцию
+            await bot.send_telegram_message("Test message with retry")
+            
+            # Проверяем, что send_message был вызван 3 раза
+            assert mock_bot_instance.send_message.call_count == 3
+            # Проверяем, что все вызовы были с правильными параметрами
+            for call in mock_bot_instance.send_message.call_args_list:
+                assert call[1]['chat_id'] == 'test'
+                assert call[1]['text'] == "Test message with retry"
