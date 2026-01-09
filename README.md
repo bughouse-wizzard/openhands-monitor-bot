@@ -118,11 +118,11 @@ services:
 4. **`build: .`** - Указывает Docker Compose собрать образ из Dockerfile в текущей директории (`.`).
 5. **`container_name: openhands-monitor`** - Задает явное имя для контейнера вместо автоматически сгенерированного.
 6. **`restart: always`** - Политика перезапуска контейнера. Значение `always` означает, что контейнер будет автоматически перезапускаться при любом завершении (включая ручную остановку).
-7. **`network_mode: host`** - Режим сети контейнера. Значение `host` означает, что контейнер использует сетевой стек хоста (нет изоляции сети), что упрощает доступ к локальным сервисам.
+7. **`network_mode: host`** - Режим сети контейнера. Значение `host` означает, что контейнер использует сетевой стек хоста (нет изоляции сети), что упрощает доступ к локальным сервисам. В этом режиме `localhost` внутри контейнера ссылается на хост-машину.
 8. **`environment:`** - Раздел определения переменных окружения для контейнера.
    - **`TELEGRAM_TOKEN=${TELEGRAM_TOKEN}`** - Токен Telegram бота, берется из переменной окружения хоста с тем же именем.
    - **`CHAT_ID=${CHAT_ID}`** - ID чата Telegram, берется из переменной окружения хоста.
-   - **`OPENHANDS_API_URL=http://localhost:3000`** - URL API OpenHands. По умолчанию указывает на локальный сервер на порту 3000.
+   - **`OPENHANDS_API_URL=http://localhost:3000`** - URL API OpenHands. Использует `localhost:3000`, так как контейнер работает в режиме `host` сети.
 
 **Особенности данной конфигурации:**
 - Использует режим `host` для сети, что удобно для доступа к локальным сервисам
@@ -268,11 +268,17 @@ docker build -t openhands-monitor .
 
 Перед запуском необходимо настроить следующие переменные окружения:
 
-| Переменная | Описание | Обязательная | Пример значения |
-|------------|----------|--------------|-----------------|
-| `TELEGRAM_TOKEN` | Токен вашего Telegram бота | Да | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
-| `CHAT_ID` | ID чата для отправки уведомлений | Да | `-1001234567890` |
-| `OPENHANDS_API_URL` | URL API OpenHands | Нет (по умолчанию: `http://host.docker.internal:3000`) | `http://localhost:3000` |
+| Переменная | Описание | Обязательная | Значение по умолчанию | Пример значения |
+|------------|----------|--------------|-----------------------|-----------------|
+| `TELEGRAM_TOKEN` | Токен вашего Telegram бота | Да | Нет | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
+| `CHAT_ID` | ID чата для отправки уведомлений | Да | Нет | `-1001234567890` |
+| `OPENHANDS_API_URL` | URL API OpenHands | Нет | `http://host.docker.internal:3000` | `http://localhost:3000` или `http://api.openhands.example.com` |
+
+**Примечание по `OPENHANDS_API_URL`:**
+- **По умолчанию**: `http://host.docker.internal:3000` - для Docker контейнеров (без режима `host` сети)
+- **Для Docker с `network_mode: host`**: Используйте `http://localhost:3000`
+- **Для локального запуска без Docker**: Используйте `http://localhost:3000`
+- **Для продакшн**: Укажите полный URL вашего API сервера
 
 ### Запуск приложения
 
@@ -288,6 +294,7 @@ python bot.py
 ```bash
 TELEGRAM_TOKEN=ваш_токен
 CHAT_ID=ваш_chat_id
+# Для Docker Compose с network_mode: host используйте localhost
 OPENHANDS_API_URL=http://localhost:3000
 ```
 
@@ -306,6 +313,8 @@ docker run -d \
   -e OPENHANDS_API_URL="http://localhost:3000" \
   openhands-monitor
 ```
+
+**Примечание**: При использовании `--network host` используйте `localhost:3000`. Без этого флага используйте `host.docker.internal:3000`.
 
 ### Получение Telegram Chat ID
 1. Создайте бота через [@BotFather](https://t.me/botfather)
