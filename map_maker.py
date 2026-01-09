@@ -1,11 +1,15 @@
 """
-Модуль для работы с определениями слов.
+Module for working with word definitions.
 
-Предоставляет функцию get_definitions для получения определений слов
-из стандартного или пользовательского словаря.
+Provides the get_definitions function for retrieving word definitions
+from a standard or custom dictionary.
 """
 
-# Стандартный словарь с определениями
+# Standard dictionary with definitions
+# dict: Standard dictionary containing word definitions.
+# This dictionary contains common words with their definitions. It serves
+# as the default dictionary for the get_definitions function.
+# Keys are lowercase strings (words), values are lists of definition strings.
 STANDARD_DICTIONARY = {
     "apple": [
         "A fruit that grows on trees",
@@ -35,27 +39,39 @@ STANDARD_DICTIONARY = {
 
 def get_definitions(word: str, custom_dict: dict = None) -> list:
     """
-    Получает определения слова из словаря.
-    
+    Retrieves definitions for a word from a dictionary.
+
+    This function looks up a word in either the standard dictionary or a
+    provided custom dictionary. It performs case-insensitive search and
+    normalizes input by converting to lowercase and stripping whitespace.
+
     Args:
-        word (str): Слово для поиска определений
-        custom_dict (dict, optional): Пользовательский словарь. 
-            Если не указан, используется стандартный словарь.
-    
+        word (str): The word to look up definitions for. Non-string inputs
+            will be converted to strings.
+        custom_dict (dict, optional): Custom dictionary to use instead of
+            the standard dictionary. If None, uses STANDARD_DICTIONARY.
+
     Returns:
-        list: Список определений слова. Если слово не найдено, 
-              возвращает пустой список.
-    
+        list: List of definitions for the word. Returns an empty list if
+            the word is not found in the dictionary.
+
+    Raises:
+        None: This function handles all errors internally and returns
+            appropriate default values.
+
     Examples:
         >>> get_definitions("apple")
         ['A fruit that grows on trees', 'A technology company founded by Steve Jobs']
         
-        >>> custom_dict = {"python": ["Мой любимый язык программирования"]}
+        >>> custom_dict = {"python": ["My favorite programming language"]}
         >>> get_definitions("python", custom_dict)
-        ['Мой любимый язык программирования']
+        ['My favorite programming language']
         
         >>> get_definitions("nonexistent")
         []
+        
+        >>> get_definitions("  APPLE  ")  # Normalized input
+        ['A fruit that grows on trees', 'A technology company founded by Steve Jobs']
     """
     # Проверяем, что word является строкой
     if not isinstance(word, str):

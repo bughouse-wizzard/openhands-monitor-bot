@@ -1,3 +1,16 @@
+"""
+OpenHands Monitor Bot - Main monitoring module.
+
+This module provides functionality for monitoring OpenHands conversations/tasks
+and sending notifications to Telegram about status changes.
+
+Key components:
+- Configuration via environment variables
+- Asynchronous polling of OpenHands API
+- State tracking for conversation changes
+- Telegram notification system with retry logic
+"""
+
 import os
 import asyncio
 import httpx
@@ -25,24 +38,38 @@ Keys are conversation IDs (str), values are status strings (str)."""
 
 # --- Telegram Bot Initialization ---
 bot = Bot(token=TELEGRAM_TOKEN)
+"""telegram.Bot: Telegram Bot instance initialized with TELEGRAM_TOKEN.
+This global instance is used by send_telegram_message function to send
+notifications to the configured chat."""
 
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
 async def send_telegram_message(message: str) -> None:
     """
     Sends a message to the configured Telegram chat with retry logic.
 
-    This function uses the tenacity library to automatically retry sending
-    the message up to 3 times with a 2-second wait between attempts if
-    Telegram API errors occur.
+    This function sends a message to the Telegram chat specified by the
+    CHAT_ID environment variable using the bot token from TELEGRAM_TOKEN.
+    It includes automatic retry logic using the tenacity library, which
+    will attempt to send the message up to 3 times with a 2-second wait
+    between attempts if Telegram API errors occur.
 
     Args:
         message (str): The message content to send to Telegram chat.
+            Should be a non-empty string containing the notification text.
+
+    Returns:
+        None: This function does not return a value. Success is indicated
+            by the absence of exceptions.
 
     Raises:
         TelegramError: If all retry attempts fail to send the message.
+            This exception is raised after 3 unsuccessful attempts.
 
     Note:
-        Uses global TELEGRAM_TOKEN and CHAT_ID from environment variables.
+        This function uses the global TELEGRAM_TOKEN and CHAT_ID variables
+        which are loaded from environment variables at module initialization.
+        Ensure these environment variables are properly set before calling
+        this function.
     """
     try:
         await bot.send_message(chat_id=CHAT_ID, text=message)
@@ -54,23 +81,36 @@ async def fetch_conversations() -> list[dict] | None:
     """
     Fetches all conversations from the OpenHands API.
 
-    Makes an asynchronous HTTP GET request to the OpenHands API to retrieve
-    the list of conversations. Handles various types of errors gracefully
-    and returns None if the request fails.
+    Makes an asynchronous HTTP GET request to the OpenHands API endpoint
+    to retrieve the current list of conversations/tasks. The function
+    handles various error conditions gracefully and returns None if the
+    request fails for any reason.
+
+    The API endpoint is constructed using the OPENHANDS_API_URL environment
+    variable with the path '/api/conversations' appended.
 
     Returns:
         list[dict] | None: A list of conversation dictionaries if successful,
-            where each dictionary contains conversation details like id, title,
-            and status. Returns None if the request fails due to HTTP errors,
-            network issues, or JSON parsing errors.
+            where each dictionary contains conversation details. Expected keys
+            in each dictionary include:
+            - 'id' (str): Unique identifier for the conversation
+            - 'title' (str, optional): Title/name of the conversation
+            - 'status' (str, optional): Current status of the conversation
+            Returns None if the request fails due to HTTP errors, network
+            issues, or JSON parsing errors.
 
     Raises:
         httpx.HTTPStatusError: If the API returns an HTTP error status (4xx, 5xx).
-        httpx.RequestError: If there's a network-related error.
-        ValueError: If the response body cannot be parsed as JSON.
+            This exception is caught internally and results in None being returned.
+        httpx.RequestError: If there's a network-related error (timeout, connection
+            refused, etc.). Caught internally and results in None being returned.
+        ValueError: If the response body cannot be parsed as JSON. Caught internally
+            and results in None being returned.
 
     Note:
-        Uses global OPENHANDS_API_URL from environment variables.
+        This function uses the global OPENHANDS_API_URL variable which is loaded
+        from environment variables at module initialization. The default value is
+        'http://host.docker.internal:3000' if not specified.
     """
     async with httpx.AsyncClient() as client:
         try:
@@ -89,20 +129,32 @@ async def poll_and_notify() -> None:
     """
     The main polling loop to monitor conversation state changes.
 
-    Continuously polls the OpenHands API at regular intervals to detect:
-    1. New conversations that have started
-    2. Status changes in existing conversations
-    3. Conversations that have been completed or removed
+    This function implements the core monitoring logic of the bot. It runs
+    continuously in an infinite loop, performing the following actions:
+    1. Sleeps for POLL_INTERVAL seconds between polling cycles
+    2. Fetches current conversations from OpenHands API
+    3. Compares current state with previous state to detect changes
+    4. Sends notifications for detected changes to Telegram
+    5. Updates internal state tracking
 
-    For each detected change, sends an appropriate notification to Telegram.
-    Maintains an internal state dictionary to track conversation statuses
-    between polling cycles.
+    Detected changes include:
+    - New conversations that have started (not in previous state)
+    - Status changes in existing conversations (different status)
+    - Conversations that have been completed or removed (cleanup)
 
-    The function runs indefinitely until the program is terminated.
+    The function maintains an internal dictionary (conversation_states)
+    that tracks the last known status of each conversation ID between
+    polling cycles.
+
+    Returns:
+        None: This function runs indefinitely until the program is
+            terminated by a KeyboardInterrupt or SystemExit signal.
 
     Note:
-        Uses global POLL_INTERVAL for sleep duration between polls.
-        Uses global conversation_states dictionary to track conversation status.
+        This function uses the global POLL_INTERVAL constant for sleep
+        duration between polls (default: 5 seconds).
+        It also uses the global conversation_states dictionary for
+        tracking conversation statuses across polling cycles.
     """
     global conversation_states
     print("Starting polling loop...")
@@ -140,17 +192,27 @@ async def main() -> None:
     """
     Initializes and runs the OpenHands Monitor Bot.
 
-    This is the main entry point of the application. It performs the following:
-    1. Validates that required environment variables are set
-    2. Sends an initialization message to Telegram
+    This is the main entry point of the application. It performs the following
+    initialization and startup sequence:
+    1. Validates that required environment variables (TELEGRAM_TOKEN, CHAT_ID) are set
+    2. Sends an initialization message to Telegram indicating bot startup
     3. Starts the continuous polling loop to monitor conversation changes
+
+    The function will run indefinitely until the program receives a termination
+    signal (KeyboardInterrupt or SystemExit). All application logic after
+    initialization is handled by the poll_and_notify() function.
+
+    Returns:
+        None: This function runs indefinitely until program termination.
 
     Raises:
         ValueError: If TELEGRAM_TOKEN or CHAT_ID environment variables are not set.
+            This validation occurs before any API calls are made.
 
     Note:
-        The function runs indefinitely until the program receives a termination
-        signal (KeyboardInterrupt or SystemExit).
+        This function should be called using asyncio.run(main()) from the
+        __main__ block. It handles the top-level exception catching for
+        graceful shutdown on termination signals.
     """
     if not all([TELEGRAM_TOKEN, CHAT_ID]):
         raise ValueError("TELEGRAM_TOKEN and CHAT_ID environment variables must be set.")
