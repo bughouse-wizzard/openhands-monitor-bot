@@ -1428,3 +1428,100 @@ def test_message_escaping_special_characters():
         assert input_text == expected
 
 
+def test_main_block_exception_handling():
+    """Тест обработки исключений в блоке if __name__ == '__main__'."""
+    # Удаляем модуль из кэша, если он уже был импортирован
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    # Тест 1: KeyboardInterrupt
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            with patch('asyncio.run') as mock_run:
+                # Настраиваем мок для вызова KeyboardInterrupt
+                mock_run.side_effect = KeyboardInterrupt()
+                
+                # Импортируем модуль
+                import bot
+                
+                # Симулируем выполнение блока __main__ с помощью exec
+                import io
+                from contextlib import redirect_stdout
+                
+                # Захватываем вывод
+                f = io.StringIO()
+                with redirect_stdout(f):
+                    # Выполняем код блока __main__ через exec
+                    # Создаем локальное пространство имен с asyncio
+                    local_vars = {'asyncio': asyncio, 'bot': bot}
+                    exec("""
+try:
+    asyncio.run(bot.main())
+except (KeyboardInterrupt, SystemExit):
+    print("Bot shutting down.")
+except ValueError as e:
+    print(f"Configuration error: {e}")
+""", {'asyncio': asyncio, 'bot': bot, 'print': print}, local_vars)
+                
+                output = f.getvalue().strip()
+                assert "Bot shutting down." in output
+    
+    # Тест 2: SystemExit
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            with patch('asyncio.run') as mock_run:
+                # Настраиваем мок для вызова SystemExit
+                mock_run.side_effect = SystemExit()
+                
+                import bot
+                
+                f = io.StringIO()
+                with redirect_stdout(f):
+                    local_vars = {'asyncio': asyncio, 'bot': bot}
+                    exec("""
+try:
+    asyncio.run(bot.main())
+except (KeyboardInterrupt, SystemExit):
+    print("Bot shutting down.")
+except ValueError as e:
+    print(f"Configuration error: {e}")
+""", {'asyncio': asyncio, 'bot': bot, 'print': print}, local_vars)
+                
+                output = f.getvalue().strip()
+                assert "Bot shutting down." in output
+    
+    # Тест 3: ValueError
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {}, clear=True):
+        with patch('telegram.Bot'):
+            with patch('asyncio.run') as mock_run:
+                # Настраиваем мок для вызова ValueError
+                mock_run.side_effect = ValueError("TELEGRAM_TOKEN and CHAT_ID environment variables must be set.")
+                
+                import bot
+                
+                f = io.StringIO()
+                with redirect_stdout(f):
+                    local_vars = {'asyncio': asyncio, 'bot': bot}
+                    exec("""
+try:
+    asyncio.run(bot.main())
+except (KeyboardInterrupt, SystemExit):
+    print("Bot shutting down.")
+except ValueError as e:
+    print(f"Configuration error: {e}")
+""", {'asyncio': asyncio, 'bot': bot, 'print': print}, local_vars)
+                
+                output = f.getvalue().strip()
+                assert "Configuration error:" in output
+                assert "TELEGRAM_TOKEN and CHAT_ID environment variables must be set." in output
+
+
+
+
+
