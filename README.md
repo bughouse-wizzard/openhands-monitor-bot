@@ -4,7 +4,21 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 
-Мониторинговый бот для отслеживания задач в платформе OpenHands с отправкой уведомлений в Telegram.
+A monitoring bot for tracking tasks in the OpenHands platform with Telegram notifications.
+
+## 📋 Overview
+
+OpenHands Monitor Bot is a monitoring system that tracks changes in OpenHands platform tasks and sends notifications to Telegram about:
+- New task creation
+- Status changes of existing tasks
+- Task completion
+
+### Key Features:
+- **Automatic Monitoring**: Continuous polling of OpenHands API for tracking changes
+- **Telegram Notifications**: Instant alerts about events
+- **Flexible Configuration**: Setup through environment variables
+- **Docker Containerization**: Ready-to-use image for quick deployment
+- **Dictionary Module**: Additional `map_maker.py` module for working with word definitions
 
 ## 📁 Структура проекта
 
@@ -130,65 +144,65 @@ services:
 - Переменные окружения настраиваются через `.env` файл или переменные окружения хоста
 - Простая однострочная конфигурация для быстрого развертывания
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-### Установка и запуск за 5 минут
+### Installation and Setup in 5 Minutes
 
 ```bash
-# 1. Клонируйте репозиторий
+# 1. Clone the repository
 git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
 cd openhands-monitor-bot
 
-# 2. Установите зависимости
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Настройте переменные окружения
-export TELEGRAM_TOKEN="ваш_токен_бота"
-export CHAT_ID="ваш_chat_id"
+# 3. Configure environment variables
+export TELEGRAM_TOKEN="your_bot_token"
+export CHAT_ID="your_chat_id"
 
-# 4. Запустите бота
+# 4. Run the bot
 python bot.py
 ```
 
-### Получение Telegram токена и Chat ID
-1. Создайте бота через [@BotFather](https://t.me/botfather)
-2. Добавьте бота в нужный чат/канал
-3. Получите Chat ID:
+### Getting Telegram Token and Chat ID
+1. Create a bot via [@BotFather](https://t.me/botfather)
+2. Add the bot to the desired chat/channel
+3. Get Chat ID:
 ```bash
-curl "https://api.telegram.org/bot<ВАШ_ТОКЕН>/getUpdates"
+curl "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"
 ```
 
-## 📋 Содержание
-- [Обзор](#обзор)
-- [Установка](#установка)
-- [Использование](#использование)
-- [Документация API](#документация-api)
-- [Развертывание в продакшн](#развертывание-в-продакшн)
-- [Мониторинг и логирование](#мониторинг-и-логирование)
-- [Устранение неполадок](#устранение-неполадок)
-- [Безопасность](#безопасность)
-- [Производительность](#производительность)
-- [Разработка](#разработка)
-- [Тестирование](#тестирование)
-- [Вклад в проект](#вклад-в-проект)
-- [Поддержка и обслуживание](#поддержка-и-обслуживание)
-- [Часто задаваемые вопросы (FAQ)](#часто-задаваемые-вопросы-faq)
-- [Лицензия](#лицензия)
-- [Контакты](#контакты)
+## 📋 Table of Contents
+- [Overview](#overview)
+- [Installation](#installation)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Production Deployment](#production-deployment)
+- [Monitoring and Logging](#monitoring-and-logging)
+- [Troubleshooting](#troubleshooting)
+- [Security](#security)
+- [Performance](#performance)
+- [Development](#development)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [Support and Maintenance](#support-and-maintenance)
+- [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+- [License](#license)
+- [Contact](#contact)
 
-## Обзор
+## Overview
 
-OpenHands Monitor Bot — это система мониторинга, которая отслеживает изменения в задачах платформы OpenHands и отправляет уведомления в Telegram о:
-- Создании новых задач
-- Изменении статуса существующих задач
-- Завершении задач
+OpenHands Monitor Bot is a monitoring system that tracks changes in OpenHands platform tasks and sends notifications to Telegram about:
+- New task creation
+- Status changes of existing tasks
+- Task completion
 
-### Основные возможности:
-- **Автоматический мониторинг**: Постоянный опрос API OpenHands для отслеживания изменений
-- **Уведомления в Telegram**: Мгновенные оповещения о событиях
-- **Гибкая конфигурация**: Настройка через переменные окружения
-- **Docker-контейнеризация**: Готовый образ для быстрого развертывания
-- **Модуль словаря**: Дополнительный модуль `map_maker.py` для работы с определениями слов
+### Key Features:
+- **Automatic Monitoring**: Continuous polling of OpenHands API for tracking changes
+- **Telegram Notifications**: Instant alerts about events
+- **Flexible Configuration**: Setup through environment variables
+- **Docker Containerization**: Ready-to-use image for quick deployment
+- **Dictionary Module**: Additional `map_maker.py` module for working with word definitions
 
 ### Архитектура:
 
@@ -240,65 +254,65 @@ OpenHands API → [HTTP запрос] → bot.py → [Обработка сос�
 - **Контейнеризация**: Docker, Docker Compose
 - **Тестирование**: pytest, pytest-asyncio, pytest-cov
 
-## Установка
+## Installation
 
-### Предварительные требования
-- Python 3.11 или выше
-- Docker и Docker Compose (для контейнеризации)
-- Аккаунт в Telegram с созданным ботом через [@BotFather](https://t.me/botfather)
+### Prerequisites
+- Python 3.11 or higher
+- Docker and Docker Compose (for containerization)
+- Telegram account with a bot created via [@BotFather](https://t.me/botfather)
 
-### Установка зависимостей
+### Installing Dependencies
 
-#### Способ 1: Установка через pip (все зависимости, включая тестовые)
+#### Method 1: Install via pip (all dependencies, including test dependencies)
 ```bash
 pip install -r requirements.txt
 ```
 
-#### Способ 2: Установка только основных зависимостей
+#### Method 2: Install only core dependencies
 ```bash
 pip install python-telegram-bot httpx tenacity asyncio
 ```
 
-#### Способ 3: Установка через Docker
+#### Method 3: Install via Docker
 ```bash
 docker build -t openhands-monitor .
 ```
 
-### Переменные окружения
+### Environment Variables
 
-Перед запуском необходимо настроить следующие переменные окружения:
+Before running, you need to configure the following environment variables:
 
-| Переменная | Описание | Обязательная | Значение по умолчанию | Пример значения |
-|------------|----------|--------------|-----------------------|-----------------|
-| `TELEGRAM_TOKEN` | Токен вашего Telegram бота | Да | Нет | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
-| `CHAT_ID` | ID чата для отправки уведомлений | Да | Нет | `-1001234567890` |
-| `OPENHANDS_API_URL` | URL API OpenHands | Нет | `http://host.docker.internal:3000` | `http://localhost:3000` или `http://api.openhands.example.com` |
+| Variable | Description | Required | Default Value | Example Value |
+|----------|-------------|----------|---------------|---------------|
+| `TELEGRAM_TOKEN` | Your Telegram bot token | Yes | None | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
+| `CHAT_ID` | Chat ID for sending notifications | Yes | None | `-1001234567890` |
+| `OPENHANDS_API_URL` | OpenHands API URL | No | `http://host.docker.internal:3000` | `http://localhost:3000` or `http://api.openhands.example.com` |
 
-**Примечание по `OPENHANDS_API_URL`:**
-- **По умолчанию**: `http://host.docker.internal:3000` - для Docker контейнеров (без режима `host` сети)
-- **Для Docker с `network_mode: host`**: Используйте `http://localhost:3000`
-- **Для локального запуска без Docker**: Используйте `http://localhost:3000`
-- **Для продакшн**: Укажите полный URL вашего API сервера
+**Note about `OPENHANDS_API_URL`:**
+- **Default**: `http://host.docker.internal:3000` - for Docker containers (without `host` network mode)
+- **For Docker with `network_mode: host`**: Use `http://localhost:3000`
+- **For local run without Docker**: Use `http://localhost:3000`
+- **For production**: Specify the full URL of your API server
 
-### Запуск приложения
+### Running the Application
 
-#### Способ 1: Запуск напрямую
+#### Method 1: Direct run
 ```bash
-export TELEGRAM_TOKEN="ваш_токен"
-export CHAT_ID="ваш_chat_id"
+export TELEGRAM_TOKEN="your_token"
+export CHAT_ID="your_chat_id"
 python bot.py
 ```
 
-#### Способ 2: Запуск через Docker Compose
-1. Создайте файл `.env` в корне проекта:
+#### Method 2: Run via Docker Compose
+1. Create a `.env` file in the project root:
 ```bash
-TELEGRAM_TOKEN=ваш_токен
-CHAT_ID=ваш_chat_id
-# Для Docker Compose с network_mode: host используйте localhost
+TELEGRAM_TOKEN=your_token
+CHAT_ID=your_chat_id
+# For Docker Compose with network_mode: host use localhost
 OPENHANDS_API_URL=http://localhost:3000
 ```
 
-2. Запустите контейнер:
+2. Start the container:
 ```bash
 docker-compose up -d
 ```

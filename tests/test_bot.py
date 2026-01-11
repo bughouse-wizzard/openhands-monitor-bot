@@ -1,8 +1,8 @@
 """
-Упрощенные тесты для модуля bot.py.
+Comprehensive unit tests for bot.py module.
 
-Тесты проверяют логику работы функций без реальных вызовов API.
-Используется мокинг для изоляции тестов от внешних зависимостей.
+Tests verify core functionalities without real API calls.
+Uses mocking with unittest.mock to isolate tests from external dependencies.
 """
 
 import pytest
