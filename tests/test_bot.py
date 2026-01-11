@@ -386,6 +386,40 @@ async def test_fetch_conversations_request_error():
 
 
 @pytest.mark.asyncio
+async def test_fetch_conversations_failure():
+    """Test fetch_conversations failure with HTTP error status code."""
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Mock httpx.AsyncClient to return HTTP error
+            mock_client = AsyncMock()
+            mock_client.__aenter__.return_value = mock_client
+            mock_client.__aexit__.return_value = None
+            
+            import httpx
+            mock_response = Mock()
+            mock_response.status_code = 500
+            mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+                "HTTP error",
+                request=Mock(),
+                response=mock_response
+            )
+            mock_client.get.return_value = mock_response
+            
+            with patch('httpx.AsyncClient', return_value=mock_client):
+                # Call the function
+                result = await bot.fetch_conversations()
+                
+                # Verify that None is returned on error
+                assert result is None
+
+
+@pytest.mark.asyncio
 async def test_poll_and_notify_new_conversation():
     """Тест обнаружения новой беседы и отправки уведомления."""
     # Удаляем модуль из кэша, если он уже был импортирован
@@ -1521,6 +1555,81 @@ except ValueError as e:
                 assert "Configuration error:" in output
                 assert "TELEGRAM_TOKEN and CHAT_ID environment variables must be set." in output
 
+
+@pytest.mark.asyncio
+async def test_poll_and_notify():
+    """Test poll_and_notify function with state change detection."""
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Reset global state
+            bot.conversation_states.clear()
+            
+            # Mock fetch_conversations to return different states
+            mock_conversations_first = [
+                {"id": "1", "title": "Task 1", "status": "new"},
+                {"id": "2", "title": "Task 2", "status": "new"}
+            ]
+            
+            mock_conversations_second = [
+                {"id": "1", "title": "Task 1", "status": "running"},  # Status changed
+                {"id": "2", "title": "Task 2", "status": "new"}       # Status unchanged
+            ]
+            
+            # Mock asyncio.sleep to break the loop after first iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    # First call returns conversations with 'new' status
+                    mock_fetch.return_value = mock_conversations_first
+                    
+                    # Run poll_and_notify and expect loop to break
+                    with pytest.raises(Exception, match="Break loop"):
+                        await bot.poll_and_notify()
+                    
+                    # Verify messages were sent for new conversations
+                    assert mock_bot_instance.send_message.call_count == 2
+                    
+                    # Check first message
+                    first_call = mock_bot_instance.send_message.call_args_list[0]
+                    assert "New Task Started: Task 1" in first_call[1]['text']
+                    
+                    # Check second message  
+                    second_call = mock_bot_instance.send_message.call_args_list[1]
+                    assert "New Task Started: Task 2" in second_call[1]['text']
+                    
+                    # Verify state was updated
+                    assert bot.conversation_states == {"1": "new", "2": "new"}
+                    
+                    # Reset mock for second iteration
+                    mock_bot_instance.send_message.reset_mock()
+                    mock_sleep.reset_mock()
+                    
+                    # Set up for second iteration with status change
+                    mock_fetch.return_value = mock_conversations_second
+                    
+                    # Mock sleep to break after second iteration
+                    with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                        # Run poll_and_notify again
+                        with pytest.raises(Exception, match="Break loop"):
+                            await bot.poll_and_notify()
+                        
+                        # Verify only one message was sent (for status change)
+                        assert mock_bot_instance.send_message.call_count == 1
+                        
+                        # Check the message content
+                        call = mock_bot_instance.send_message.call_args
+                        assert "Task Status Update: Task 1 is now running." in call[1]['text']
+                        
+                        # Verify state was updated
+                        assert bot.conversation_states == {"1": "running", "2": "new"}
 
 
 
