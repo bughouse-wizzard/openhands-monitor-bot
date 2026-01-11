@@ -6,6 +6,10 @@
 
 A Telegram bot for monitoring OpenHands platform tasks and sending real-time notifications about task status changes.
 
+## 🚀 Getting Started
+
+The OpenHands Monitor Bot is a Python application that continuously monitors OpenHands platform tasks and sends real-time notifications to Telegram when task statuses change. It's designed to help developers and administrators stay informed about their OpenHands tasks without constantly checking the platform.
+
 ## 📋 Table of Contents
 - [Installation](#installation)
 - [Usage](#usage)
@@ -85,11 +89,28 @@ Once running, the bot will:
 
 ### Required Environment Variables
 
+The bot requires the following environment variables to be set. These can be configured in a `.env` file in the project root or set directly in your environment.
+
 | Variable | Description | Required | Default Value | Example |
 |----------|-------------|----------|---------------|---------|
-| `TELEGRAM_TOKEN` | Your Telegram bot token | Yes | None | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
-| `CHAT_ID` | Telegram chat ID for notifications | Yes | None | `-1001234567890` |
+| `TELEGRAM_TOKEN` | Your Telegram bot token obtained from [@BotFather](https://t.me/botfather) | **Yes** | None | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
+| `CHAT_ID` | Telegram chat ID where notifications will be sent | **Yes** | None | `-1001234567890` |
 | `OPENHANDS_API_URL` | OpenHands API base URL | No | `http://host.docker.internal:3000` | `http://localhost:3000` or `https://api.openhands.example.com` |
+
+### Creating the `.env` File
+
+Create a `.env` file in the project root directory with the following content:
+
+```bash
+# Required: Telegram Bot Token from @BotFather
+TELEGRAM_TOKEN=your_telegram_bot_token_here
+
+# Required: Telegram Chat ID for notifications
+CHAT_ID=your_telegram_chat_id_here
+
+# Optional: OpenHands API URL (defaults to http://host.docker.internal:3000)
+OPENHANDS_API_URL=http://localhost:3000
+```
 
 ### Obtaining Telegram Credentials
 
