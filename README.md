@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 
-Мониторинговый бот для отслеживания задач в платформе OpenHands с отправкой уведомлений в Telegram.
+A monitoring bot for tracking tasks in the OpenHands platform with Telegram notifications.
 
 ## 📁 Структура проекта
 
@@ -404,38 +404,38 @@ services:
 
 ### Модуль `map_maker.py`
 
-#### Функция `get_definitions(word: str, custom_dict: dict = None) -> list`
+#### Function `get_definitions(word: str, custom_dict: dict = None) -> list`
 
-Основная функция модуля для получения определений слов из словаря.
+Main module function for retrieving word definitions from a dictionary.
 
-**Параметры:**
-- `word` (str): Слово для поиска определений. Может быть строкой любого типа, включая числа, булевы значения и None (будут преобразованы в строку).
-- `custom_dict` (dict, optional): Пользовательский словарь для поиска определений. Если не указан, используется стандартный словарь `STANDARD_DICTIONARY`.
+**Parameters:**
+- `word` (str): Word to search for definitions. Can be any type of string, including numbers, boolean values, and None (will be converted to string).
+- `custom_dict` (dict, optional): Custom dictionary for searching definitions. If not specified, the standard dictionary `STANDARD_DICTIONARY` is used.
 
-**Возвращаемое значение:**
-- `list`: Список определений слова. Если слово не найдено, возвращает пустой список `[]`.
+**Return value:**
+- `list`: List of word definitions. If the word is not found, returns an empty list `[]`.
 
-**Особенности работы:**
-1. **Нормализация слова**: Функция автоматически нормализует входное слово:
-   - Приводит к нижнему регистру (`lower()`)
-   - Удаляет лишние пробелы в начале и конце (`strip()`)
-   - Обрабатывает табуляции, переносы строк и другие пробельные символы
+**Operation features:**
+1. **Word normalization**: The function automatically normalizes the input word:
+   - Converts to lowercase (`lower()`)
+   - Removes extra spaces at the beginning and end (`strip()`)
+   - Handles tabs, line breaks, and other whitespace characters
 
-2. **Поиск в словаре**: Поиск выполняется в следующем порядке:
-   - Если передан `custom_dict`, поиск выполняется в нем
-   - Если `custom_dict` не передан или равен `None`, используется стандартный словарь
-   - Если слово не найдено, возвращается пустой список
+2. **Dictionary search**: Search is performed in the following order:
+   - If `custom_dict` is provided, search is performed in it
+   - If `custom_dict` is not provided or is `None`, the standard dictionary is used
+   - If the word is not found, an empty list is returned
 
-3. **Обработка типов данных**:
-   - Если значение в словаре не является списком, оно оборачивается в список
-   - Функция всегда возвращает копию списка определений, а не ссылку на оригинал
-   - Поддерживаются различные типы значений в определениях (строки, числа, словари, списки и т.д.)
+3. **Data type handling**:
+   - If the value in the dictionary is not a list, it is wrapped in a list
+   - The function always returns a copy of the definitions list, not a reference to the original
+   - Various types of values in definitions are supported (strings, numbers, dictionaries, lists, etc.)
 
-**Стандартный словарь (`STANDARD_DICTIONARY`):**
-Содержит следующие слова с определениями:
+**Standard dictionary (`STANDARD_DICTIONARY`):**
+Contains the following words with definitions:
 
-| Слово | Определения |
-|-------|-------------|
+| Word | Definitions |
+|------|-------------|
 | `apple` | 1. "A fruit that grows on trees"<br>2. "A technology company founded by Steve Jobs" |
 | `python` | 1. "A high-level programming language"<br>2. "A large constricting snake" |
 | `openhands` | "A platform for AI development and collaboration" |
@@ -443,159 +443,159 @@ services:
 | `hello` | 1. "A greeting or expression of goodwill"<br>2. "Used to attract attention" |
 | `world` | 1. "The earth, together with all of its countries and peoples"<br>2. "A particular region or group of countries" |
 
-**Примеры использования:**
+**Usage examples:**
 
 ```python
 from map_maker import get_definitions
 
-# Базовый пример
+# Basic example
 definitions = get_definitions("apple")
 print(definitions)  # ['A fruit that grows on trees', 'A technology company founded by Steve Jobs']
 
-# С пользовательским словарем
+# With custom dictionary
 custom_dict = {
-    "python": ["Мой любимый язык программирования"],
-    "openhands": ["Платформа для разработки ИИ"]
+    "python": ["My favorite programming language"],
+    "openhands": ["Platform for AI development"]
 }
 definitions = get_definitions("python", custom_dict)
-print(definitions)  # ['Мой любимый язык программирования']
+print(definitions)  # ['My favorite programming language']
 
-# Слово не найдено
+# Word not found
 definitions = get_definitions("nonexistent")
 print(definitions)  # []
 
-# Регистронезависимый поиск
+# Case-insensitive search
 definitions1 = get_definitions("APPLE")
 definitions2 = get_definitions("apple")
 definitions3 = get_definitions("Apple")
 print(definitions1 == definitions2 == definitions3)  # True
 
-# Обработка пробелов
+# Whitespace handling
 definitions = get_definitions("  apple  ")
 print(definitions)  # ['A fruit that grows on trees', 'A technology company founded by Steve Jobs']
 
-# Нестроковые входные данные
-definitions = get_definitions(123)  # Будет преобразовано в "123"
-print(definitions)  # [] (если "123" нет в словаре)
+# Non-string input data
+definitions = get_definitions(123)  # Will be converted to "123"
+print(definitions)  # [] (if "123" is not in the dictionary)
 
-# Пустая строка
+# Empty string
 definitions = get_definitions("")
 print(definitions)  # []
 
-# None как входное значение
-definitions = get_definitions(None)  # Будет преобразовано в "none"
-print(definitions)  # [] (если "none" нет в словаре)
+# None as input value
+definitions = get_definitions(None)  # Will be converted to "none"
+print(definitions)  # [] (if "none" is not in the dictionary)
 ```
 
-**Обработка ошибок и граничные случаи:**
-- Функция не выбрасывает исключения при некорректных входных данных
-- Все некорректные типы данных преобразуются в строки
-- Пустые строки и строки только из пробелов возвращают пустой список
-- Если в словаре для слова указано значение `None`, оно будет возвращено как `[None]`
-- Функция возвращает копию списка, поэтому модификация результата не влияет на оригинальный словарь
+**Error handling and edge cases:**
+- The function does not throw exceptions for incorrect input data
+- All incorrect data types are converted to strings
+- Empty strings and strings consisting only of spaces return an empty list
+- If the dictionary contains `None` value for a word, it will be returned as `[None]`
+- The function returns a copy of the list, so modifying the result does not affect the original dictionary
 
-**Производительность:**
-- Поиск выполняется за O(1) благодаря использованию словаря Python
-- Функция эффективно работает с большими словарями (тысячи записей)
-- Возвращается копия списка, что обеспечивает безопасность данных
+**Performance:**
+- Search is performed in O(1) time thanks to using Python dictionary
+- The function works efficiently with large dictionaries (thousands of entries)
+- Returns a copy of the list, ensuring data safety
 
-### Модуль `bot.py`
+### Module `bot.py`
 
-#### Основные функции:
+#### Main functions:
 
 1. **`send_telegram_message(message: str)`**
-   - **Назначение**: Асинхронная функция для отправки сообщений в настроенный Telegram чат
-   - **Параметры**: 
-     - `message` (str): Текст сообщения для отправки
-   - **Возвращаемое значение**: None
-   - **Особенности**:
-     - Использует механизм повторных попыток с помощью декоратора `@retry` из библиотеки `tenacity`
-     - При ошибках отправки логирует их и повторяет попытку до 3 раз с интервалом 2 секунды
-     - Использует библиотеку `python-telegram-bot` для взаимодействия с Telegram API
-     - При успешной отправке не возвращает значение, при ошибке выбрасывает исключение
+   - **Purpose**: Asynchronous function for sending messages to the configured Telegram chat
+   - **Parameters**: 
+     - `message` (str): Message text to send
+   - **Return value**: None
+   - **Features**:
+     - Uses retry mechanism with the `@retry` decorator from the `tenacity` library
+     - Logs sending errors and retries up to 3 times with a 2-second interval
+     - Uses the `python-telegram-bot` library for interacting with Telegram API
+     - Does not return a value on successful send, throws an exception on error
 
 2. **`fetch_conversations()`**
-   - **Назначение**: Асинхронная функция для получения списка разговоров из API OpenHands
-   - **Параметры**: Нет
-   - **Возвращаемое значение**: 
-     - `list` или `None`: Список разговоров в формате JSON или `None` при ошибке
-   - **Особенности**:
-     - Использует асинхронный HTTP-клиент `httpx` для выполнения GET запроса
-     - Обрабатывает различные типы ошибок:
-       - `httpx.HTTPStatusError`: HTTP ошибки (4xx, 5xx)
-       - `httpx.RequestError`: Ошибки соединения
-       - `ValueError`: Ошибки парсинга JSON
-     - При ошибках возвращает `None` и логирует ошибку в консоль
+   - **Purpose**: Asynchronous function for retrieving conversation list from OpenHands API
+   - **Parameters**: None
+   - **Return value**: 
+     - `list` or `None`: List of conversations in JSON format or `None` on error
+   - **Features**:
+     - Uses asynchronous HTTP client `httpx` to perform GET request
+     - Handles various error types:
+       - `httpx.HTTPStatusError`: HTTP errors (4xx, 5xx)
+       - `httpx.RequestError`: Connection errors
+       - `ValueError`: JSON parsing errors
+     - Returns `None` on errors and logs error to console
 
 3. **`poll_and_notify()`**
-   - **Назначение**: Основной асинхронный цикл опроса API OpenHands и отправки уведомлений
-   - **Параметры**: Нет
-   - **Возвращаемое значение**: None (бесконечный цикл)
-   - **Логика работы**:
-     1. Ожидает `POLL_INTERVAL` секунд (по умолчанию 5)
-     2. Получает текущий список разговоров через `fetch_conversations()`
-     3. Для каждого разговора:
-        - Извлекает ID, заголовок и статус
-        - Если разговор новый (ID нет в `conversation_states`):
-          - Отправляет уведомление "🆕 New Task Started"
-          - Добавляет в кэш состояний
-        - Если статус изменился:
-          - Отправляет уведомление "🔄 Task Status Update"
-          - Обновляет статус в кэше
-     4. Очищает кэш от удаленных разговоров
-   - **Особенности**:
-     - Использует глобальную переменную `conversation_states` для хранения состояний
-     - Обрабатывает разговоры без ID (пропускает с предупреждением)
-     - Бесконечный цикл с контролируемым интервалом опроса
+   - **Purpose**: Main asynchronous polling loop for OpenHands API and sending notifications
+   - **Parameters**: None
+   - **Return value**: None (infinite loop)
+   - **Operation logic**:
+     1. Waits `POLL_INTERVAL` seconds (default 5)
+     2. Gets current conversation list via `fetch_conversations()`
+     3. For each conversation:
+        - Extracts ID, title, and status
+        - If conversation is new (ID not in `conversation_states`):
+          - Sends notification "🆕 New Task Started"
+          - Adds to state cache
+        - If status changed:
+          - Sends notification "🔄 Task Status Update"
+          - Updates status in cache
+     4. Cleans cache of removed conversations
+   - **Features**:
+     - Uses global variable `conversation_states` for storing states
+     - Handles conversations without ID (skips with warning)
+     - Infinite loop with controlled polling interval
 
 4. **`main()`**
-   - **Назначение**: Точка входа для инициализации и запуска бота
-   - **Параметры**: Нет
-   - **Возвращаемое значение**: None
-   - **Логика работы**:
-     1. Проверяет наличие обязательных переменных окружения (`TELEGRAM_TOKEN`, `CHAT_ID`)
-     2. Отправляет стартовое сообщение в Telegram
-     3. Запускает основной цикл опроса через `poll_and_notify()`
-   - **Обработка ошибок**:
-     - При отсутствии переменных окружения выбрасывает `ValueError`
-     - Перехватывает `KeyboardInterrupt` и `SystemExit` для корректного завершения
+   - **Purpose**: Entry point for initializing and starting the bot
+   - **Parameters**: None
+   - **Return value**: None
+   - **Operation logic**:
+     1. Checks for required environment variables (`TELEGRAM_TOKEN`, `CHAT_ID`)
+     2. Sends startup message to Telegram
+     3. Starts main polling loop via `poll_and_notify()`
+   - **Error handling**:
+     - Throws `ValueError` if environment variables are missing
+     - Catches `KeyboardInterrupt` and `SystemExit` for graceful shutdown
 
-#### Глобальные переменные и конфигурация:
+#### Global variables and configuration:
 
-**Переменные окружения:**
-- `TELEGRAM_TOKEN` (обязательно): Токен Telegram бота, полученный от @BotFather
-- `CHAT_ID` (обязательно): ID чата/канала для отправки уведомлений
-- `OPENHANDS_API_URL` (опционально): URL API OpenHands (по умолчанию: `http://host.docker.internal:3000`)
+**Environment variables:**
+- `TELEGRAM_TOKEN` (required): Telegram bot token obtained from @BotFather
+- `CHAT_ID` (required): Chat/channel ID for sending notifications
+- `OPENHANDS_API_URL` (optional): OpenHands API URL (default: `http://host.docker.internal:3000`)
 
-**Константы в коде:**
-- `POLL_INTERVAL = 5`: Интервал опроса API в секундах (зафиксирован в коде, строка 12)
-- `conversation_states = {}`: Глобальный словарь для хранения состояний разговоров
+**Code constants:**
+- `POLL_INTERVAL = 5`: API polling interval in seconds (fixed in code, line 12)
+- `conversation_states = {}`: Global dictionary for storing conversation states
 
-**Структура данных разговора:**
-Каждый разговор из API OpenHands должен содержать следующие поля:
-- `id` (str): Уникальный идентификатор разговора (обязательно)
-- `title` (str): Заголовок задачи (по умолчанию "Untitled")
-- `status` (str): Статус задачи (по умолчанию "UNKNOWN")
+**Conversation data structure:**
+Each conversation from OpenHands API should contain the following fields:
+- `id` (str): Unique conversation identifier (required)
+- `title` (str): Task title (default "Untitled")
+- `status` (str): Task status (default "UNKNOWN")
 
-**Формат уведомлений:**
-- Новый разговор: `"🆕 New Task Started: {title} (ID: {conv_id})"`
-- Изменение статуса: `"🔄 Task Status Update: {title} is now {status}."`
-- Стартовое сообщение: `"🤖 OpenHands Monitor Bot is online and starting to poll."`
+**Notification formats:**
+- New conversation: `"🆕 New Task Started: {title} (ID: {conv_id})"`
+- Status change: `"🔄 Task Status Update: {title} is now {status}."`
+- Startup message: `"🤖 OpenHands Monitor Bot is online and starting to poll."`
 
-**Обработка ошибок:**
-1. **Ошибки Telegram API**: Логируются и повторяются до 3 раз
-2. **Ошибки HTTP запросов**: Логируются, функция возвращает `None`
-3. **Отсутствие обязательных переменных**: Выбрасывается `ValueError` при запуске
-4. **Разговоры без ID**: Пропускаются с предупреждением в консоль
-5. **Прерывание работы**: Корректно обрабатывает Ctrl+C и системные сигналы завершения
+**Error handling:**
+1. **Telegram API errors**: Logged and retried up to 3 times
+2. **HTTP request errors**: Logged, function returns `None`
+3. **Missing required variables**: `ValueError` thrown on startup
+4. **Conversations without ID**: Skipped with console warning
+5. **Work interruption**: Properly handles Ctrl+C and system termination signals
 
-## 🤝 Контрибьютинг
+## 🤝 Contributing
 
-Мы приветствуем вклад в развитие проекта! Вот как вы можете помочь:
+We welcome contributions to the project development! Here's how you can help:
 
-### Процесс внесения изменений
-1. **Форк репозитория**
-2. **Создайте ветку для вашей функции**
+### Contribution process
+1. **Fork the repository**
+2. **Create a branch for your feature**
    ```bash
    git checkout -b feature/amazing-feature
    ```
