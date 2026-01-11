@@ -4,21 +4,11 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
 
-A Telegram bot for monitoring OpenHands platform tasks and sending real-time notifications about task status changes.
+## Project Title & Description
 
-## 📋 Table of Contents
-- [Installation](#installation)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Project Structure](#project-structure)
-- [Quick Start](#quick-start)
+A Telegram bot for monitoring OpenHands platform tasks and sending real-time notifications about task status changes. The bot continuously polls the OpenHands API for conversation/task updates and sends notifications to a configured Telegram chat when new tasks start or existing tasks change status.
 
 ## Installation
-
-### Prerequisites
-- Python 3.11 or higher
-- Docker and Docker Compose (optional, for containerization)
-- Telegram account with a bot created via [@BotFather](https://t.me/botfather)
 
 ### Step-by-Step Installation
 
@@ -28,7 +18,7 @@ A Telegram bot for monitoring OpenHands platform tasks and sending real-time not
    cd openhands-monitor-bot
    ```
 
-2. **Install Python dependencies**:
+2. **Install dependencies**:
    ```bash
    pip install -r requirements.txt
    ```
@@ -49,30 +39,12 @@ docker build -t openhands-monitor .
 
 ## Usage
 
-### Running the Bot
+Run the bot using the following command:
 
-#### Method 1: Direct Python execution (Recommended for development)
 ```bash
 python bot.py
 ```
 
-#### Method 2: Using Docker Compose (Recommended for production)
-```bash
-docker-compose up -d
-```
-
-#### Method 3: Manual Docker run
-```bash
-docker run -d \
-  --name openhands-monitor \
-  --network host \
-  -e TELEGRAM_TOKEN="your_token" \
-  -e CHAT_ID="your_chat_id" \
-  -e OPENHANDS_API_URL="http://localhost:3000" \
-  openhands-monitor
-```
-
-### What to Expect
 Once running, the bot will:
 1. Send a startup notification to Telegram: "🤖 OpenHands Monitor Bot is online and starting to poll."
 2. Begin polling the OpenHands API every 5 seconds
@@ -85,27 +57,41 @@ Once running, the bot will:
 
 ### Required Environment Variables
 
+The bot requires the following environment variables to be set:
+
 | Variable | Description | Required | Default Value | Example |
 |----------|-------------|----------|---------------|---------|
 | `TELEGRAM_TOKEN` | Your Telegram bot token | Yes | None | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
 | `CHAT_ID` | Telegram chat ID for notifications | Yes | None | `-1001234567890` |
 | `OPENHANDS_API_URL` | OpenHands API base URL | No | `http://host.docker.internal:3000` | `http://localhost:3000` or `https://api.openhands.example.com` |
 
-### Obtaining Telegram Credentials
+### Detailed Explanation of Environment Variables
 
-1. **Create a Telegram bot**:
-   - Message [@BotFather](https://t.me/botfather) on Telegram
-   - Use `/newbot` command to create a new bot
-   - Save the token provided by BotFather
+#### TELEGRAM_TOKEN
+- **Description**: The authentication token for your Telegram bot, obtained from [@BotFather](https://t.me/botfather)
+- **How to obtain**: 
+  1. Message [@BotFather](https://t.me/botfather) on Telegram
+  2. Use the `/newbot` command to create a new bot
+  3. Save the token provided by BotFather
+- **Format**: Typically looks like `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`
 
-2. **Get Chat ID**:
-   - Add your bot to the desired chat/channel
-   - Send any message to the bot
-   - Use the following command to get updates (replace `<YOUR_TOKEN>`):
+#### CHAT_ID
+- **Description**: The unique identifier of the Telegram chat where notifications will be sent
+- **How to obtain**:
+  1. Add your bot to the desired chat/channel
+  2. Send any message to the bot
+  3. Use the following command to get updates:
      ```bash
      curl "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"
      ```
-   - Look for the `chat.id` field in the response
+  4. Look for the `chat.id` field in the response
+- **Format**: Can be a positive number for private chats or a negative number for groups/channels
+
+#### OPENHANDS_API_URL
+- **Description**: The base URL of the OpenHands API that the bot will monitor
+- **Default**: `http://host.docker.internal:3000` (for Docker containers)
+- **Development**: Typically `http://localhost:3000` when running locally
+- **Production**: Your production OpenHands API URL
 
 ## Project Structure
 
