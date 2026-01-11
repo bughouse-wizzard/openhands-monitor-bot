@@ -20,69 +20,69 @@ OpenHands Monitor Bot is a monitoring system that tracks changes in OpenHands pl
 - **Docker Containerization**: Ready-to-use image for quick deployment
 - **Dictionary Module**: Additional `map_maker.py` module for working with word definitions
 
-## 📁 Структура проекта
+## 📁 Project Structure
 
 ```
 openhands-monitor-bot/
-├── bot.py              # Основной модуль мониторинга задач OpenHands
-├── map_maker.py        # Модуль работы с определениями слов
-├── requirements.txt    # Зависимости Python
-├── Dockerfile         # Конфигурация Docker контейнера
-├── docker-compose.yml # Конфигурация Docker Compose
-├── tests/             # Тесты
+├── bot.py              # Main OpenHands task monitoring module
+├── map_maker.py        # Word definitions module
+├── requirements.txt    # Python dependencies
+├── Dockerfile         # Docker container configuration
+├── docker-compose.yml # Docker Compose configuration
+├── tests/             # Tests
 │   ├── __init__.py
 │   ├── test_bot.py
 │   └── test_map_maker.py
-├── README.md          # Документация (этот файл)
-├── LICENSE            # Лицензия MIT
-└── Implementation Plan.md  # План реализации
+├── README.md          # Documentation (this file)
+├── LICENSE            # MIT License
+└── Implementation Plan.md  # Implementation plan
 ```
 
-### Описание файлов проекта
+### Project Files Description
 
-#### **bot.py** - Основной модуль мониторинга
-- Асинхронный бот для мониторинга задач OpenHands
-- Отправляет уведомления в Telegram о новых задачах и изменениях статуса
-- Использует `asyncio` для эффективного опроса API
-- Конфигурируется через переменные окружения
+#### **bot.py** - Main monitoring module
+- Asynchronous bot for monitoring OpenHands tasks
+- Sends notifications to Telegram about new tasks and status changes
+- Uses `asyncio` for efficient API polling
+- Configured through environment variables
 
-#### **map_maker.py** - Модуль словаря
-- Функция `get_definitions()` для получения определений слов
-- Поддерживает стандартный и пользовательские словари
-- Регистронезависимый поиск с нормализацией входных данных
-- Полное тестовое покрытие
+#### **map_maker.py** - Dictionary module
+- `get_definitions()` function for retrieving word definitions
+- Supports standard and custom dictionaries
+- Case-insensitive search with input data normalization
+- Full test coverage
 
-#### **requirements.txt** - Зависимости Python
+#### **requirements.txt** - Python Dependencies
 
-Файл `requirements.txt` содержит все необходимые Python-зависимости для работы проекта. Этот файл используется системой управления зависимостями pip для установки всех необходимых пакетов.
+The `requirements.txt` file contains all necessary Python dependencies for the project. This file is used by the pip dependency management system to install all required packages.
 
-**Содержимое файла:**
+**File contents:**
 ```txt
-python-telegram-bot  # Интеграция с Telegram API - основной пакет для работы с Telegram Bot API
-httpx                # Асинхронные HTTP-запросы - современная альтернатива requests с поддержкой async/await
-tenacity             # Механизмы повторных попыток - библиотека для реализации retry-логики при сбоях
-asyncio              # Асинхронное программирование - встроенная библиотека Python для асинхронного кода
+python-telegram-bot  # Telegram API integration - main package for working with Telegram Bot API
+httpx                # Asynchronous HTTP requests - modern alternative to requests with async/await support
+tenacity             # Retry mechanisms - library for implementing retry logic for failures
+asyncio              # Asynchronous programming - built-in Python library for asynchronous code
 
-# Тестовые зависимости (опционально, для разработки)
-pytest               # Фреймворк для написания и запуска тестов
-pytest-asyncio       # Поддержка асинхронных тестов в pytest
-pytest-cov           # Интеграция с coverage для измерения покрытия кода тестами
-coverage             # Инструмент для анализа покрытия кода тестами
+# Test dependencies (optional, for development)
+pytest               # Framework for writing and running tests
+pytest-asyncio       # Asynchronous test support in pytest
+pytest-cov           # Coverage integration for measuring code test coverage
+coverage             # Tool for analyzing code test coverage
 ```
 
-**Назначение каждой зависимости:**
-1. **python-telegram-bot** - Основная библиотека для взаимодействия с Telegram Bot API. Позволяет отправлять сообщения, обрабатывать команды и управлять ботом.
-2. **httpx** - Асинхронный HTTP-клиент для выполнения запросов к API OpenHands. Поддерживает современные возможности Python async/await.
-3. **tenacity** - Библиотека для реализации устойчивости к сбоям. Используется для автоматических повторных попыток при временных сбоях сети или API.
-4. **asyncio** - Стандартная библиотека Python для асинхронного программирования. Основа для всех асинхронных операций в проекте.
+**Purpose of each dependency:**
+1. **python-telegram-bot** - Main library for interacting with Telegram Bot API. Allows sending messages, processing commands, and managing the bot.
+2. **httpx** - Asynchronous HTTP client for making requests to OpenHands API. Supports modern Python async/await capabilities.
+3. **tenacity** - Library for implementing resilience to failures. Used for automatic retry attempts during temporary network or API failures.
+4. **asyncio** - Standard Python library for asynchronous programming. Foundation for all asynchronous operations in the project.
 
-**Тестовые зависимости** устанавливаются только при необходимости разработки или запуска тестов. В продакшн-среде они не требуются.
+**Test dependencies** are installed only when needed for development or running tests. They are not required in production environment.
 
-#### **Dockerfile** - Конфигурация Docker
+#### **Dockerfile** - Docker Configuration
 
-Файл `Dockerfile` определяет конфигурацию Docker-контейнера для приложения. Он описывает, как собрать образ, какие зависимости установить и как запустить приложение.
+The `Dockerfile` defines the Docker container configuration for the application. It describes how to build the image, which dependencies to install, and how to run the application.
 
-**Полное содержимое файла:**
+**Complete file contents:**
 ```dockerfile
 FROM python:3.11-slim
 WORKDIR /app
@@ -92,25 +92,25 @@ COPY bot.py .
 CMD ["python", "bot.py"]
 ```
 
-**Построчное объяснение:**
-1. **`FROM python:3.11-slim`** - Использует официальный образ Python 3.11 с минимальным размером (slim-версия). Это базовый образ, на котором строится контейнер.
-2. **`WORKDIR /app`** - Устанавливает рабочую директорию внутри контейнера как `/app`. Все последующие команды выполняются относительно этой директории.
-3. **`COPY requirements.txt .`** - Копирует файл `requirements.txt` из локальной директории в рабочую директорию контейнера (`/app`).
-4. **`RUN pip install --no-cache-dir -r requirements.txt`** - Устанавливает все Python-зависимости из файла `requirements.txt`. Флаг `--no-cache-dir` предотвращает кэширование пакетов pip, что уменьшает размер итогового образа.
-5. **`COPY bot.py .`** - Копирует основной файл приложения `bot.py` в рабочую директорию контейнера.
-6. **`CMD ["python", "bot.py"]`** - Определяет команду по умолчанию для запуска контейнера. При старте контейнера будет выполнена команда `python bot.py`.
+**Line-by-line explanation:**
+1. **`FROM python:3.11-slim`** - Uses the official Python 3.11 image with minimal size (slim version). This is the base image on which the container is built.
+2. **`WORKDIR /app`** - Sets the working directory inside the container to `/app`. All subsequent commands are executed relative to this directory.
+3. **`COPY requirements.txt .`** - Copies the `requirements.txt` file from the local directory to the container's working directory (`/app`).
+4. **`RUN pip install --no-cache-dir -r requirements.txt`** - Installs all Python dependencies from the `requirements.txt` file. The `--no-cache-dir` flag prevents pip from caching packages, which reduces the size of the final image.
+5. **`COPY bot.py .`** - Copies the main application file `bot.py` to the container's working directory.
+6. **`CMD ["python", "bot.py"]`** - Defines the default command to run when the container starts. When the container starts, the command `python bot.py` will be executed.
 
-**Особенности данного Dockerfile:**
-- Использует slim-версию Python для уменьшения размера образа
-- Устанавливает зависимости отдельным шагом для лучшего кэширования слоев Docker
-- Копирует только необходимые файлы (минималистичный подход)
-- Использует явную команду CMD для запуска приложения
+**Features of this Dockerfile:**
+- Uses slim version of Python to reduce image size
+- Installs dependencies as a separate step for better Docker layer caching
+- Copies only necessary files (minimalist approach)
+- Uses explicit CMD command to run the application
 
-#### **docker-compose.yml** - Конфигурация Docker Compose
+#### **docker-compose.yml** - Docker Compose Configuration
 
-Файл `docker-compose.yml` определяет конфигурацию для Docker Compose - инструмента для оркестрации многоконтейнерных приложений. В данном случае он управляет одним сервисом (мониторинговым ботом).
+The `docker-compose.yml` file defines the configuration for Docker Compose - a tool for orchestrating multi-container applications. In this case, it manages one service (the monitoring bot).
 
-**Полное содержимое файла:**
+**Complete file contents:**
 ```yaml
 version: '3.8'
 services:
@@ -125,24 +125,24 @@ services:
       - OPENHANDS_API_URL=http://localhost:3000
 ```
 
-**Построчное объяснение:**
-1. **`version: '3.8'`** - Указывает версию схемы Docker Compose. Версия 3.8 поддерживает большинство современных функций Docker.
-2. **`services:`** - Начало раздела определения сервисов (контейнеров).
-3. **`openhands-monitor:`** - Имя сервиса. Это внутреннее имя, используемое Docker Compose для ссылки на этот сервис.
-4. **`build: .`** - Указывает Docker Compose собрать образ из Dockerfile в текущей директории (`.`).
-5. **`container_name: openhands-monitor`** - Задает явное имя для контейнера вместо автоматически сгенерированного.
-6. **`restart: always`** - Политика перезапуска контейнера. Значение `always` означает, что контейнер будет автоматически перезапускаться при любом завершении (включая ручную остановку).
-7. **`network_mode: host`** - Режим сети контейнера. Значение `host` означает, что контейнер использует сетевой стек хоста (нет изоляции сети), что упрощает доступ к локальным сервисам. В этом режиме `localhost` внутри контейнера ссылается на хост-машину.
-8. **`environment:`** - Раздел определения переменных окружения для контейнера.
-   - **`TELEGRAM_TOKEN=${TELEGRAM_TOKEN}`** - Токен Telegram бота, берется из переменной окружения хоста с тем же именем.
-   - **`CHAT_ID=${CHAT_ID}`** - ID чата Telegram, берется из переменной окружения хоста.
-   - **`OPENHANDS_API_URL=http://localhost:3000`** - URL API OpenHands. Использует `localhost:3000`, так как контейнер работает в режиме `host` сети.
+**Line-by-line explanation:**
+1. **`version: '3.8'`** - Specifies the Docker Compose schema version. Version 3.8 supports most modern Docker features.
+2. **`services:`** - Beginning of the services (containers) definition section.
+3. **`openhands-monitor:`** - Service name. This is the internal name used by Docker Compose to refer to this service.
+4. **`build: .`** - Tells Docker Compose to build the image from the Dockerfile in the current directory (`.`).
+5. **`container_name: openhands-monitor`** - Sets an explicit name for the container instead of an auto-generated one.
+6. **`restart: always`** - Container restart policy. The value `always` means the container will automatically restart on any termination (including manual stop).
+7. **`network_mode: host`** - Container network mode. The value `host` means the container uses the host's network stack (no network isolation), which simplifies access to local services. In this mode, `localhost` inside the container refers to the host machine.
+8. **`environment:`** - Section for defining environment variables for the container.
+   - **`TELEGRAM_TOKEN=${TELEGRAM_TOKEN}`** - Telegram bot token, taken from the host environment variable with the same name.
+   - **`CHAT_ID=${CHAT_ID}`** - Telegram chat ID, taken from the host environment variable.
+   - **`OPENHANDS_API_URL=http://localhost:3000`** - OpenHands API URL. Uses `localhost:3000` since the container runs in `host` network mode.
 
-**Особенности данной конфигурации:**
-- Использует режим `host` для сети, что удобно для доступа к локальным сервисам
-- Автоматический перезапуск обеспечивает отказоустойчивость
-- Переменные окружения настраиваются через `.env` файл или переменные окружения хоста
-- Простая однострочная конфигурация для быстрого развертывания
+**Features of this configuration:**
+- Uses `host` network mode for easy access to local services
+- Automatic restart provides fault tolerance
+- Environment variables are configured through `.env` file or host environment variables
+- Simple one-service configuration for quick deployment
 
 ## 🚀 Quick Start
 
@@ -317,87 +317,87 @@ OPENHANDS_API_URL=http://localhost:3000
 docker-compose up -d
 ```
 
-#### Способ 3: Запуск вручную через Docker
+#### Method 3: Manual run via Docker
 ```bash
 docker run -d \
   --name openhands-monitor \
   --network host \
-  -e TELEGRAM_TOKEN="ваш_токен" \
-  -e CHAT_ID="ваш_chat_id" \
+  -e TELEGRAM_TOKEN="your_token" \
+  -e CHAT_ID="your_chat_id" \
   -e OPENHANDS_API_URL="http://localhost:3000" \
   openhands-monitor
 ```
 
-**Примечание**: При использовании `--network host` используйте `localhost:3000`. Без этого флага используйте `host.docker.internal:3000`.
+**Note**: When using `--network host`, use `localhost:3000`. Without this flag, use `host.docker.internal:3000`.
 
-### Получение Telegram Chat ID
-1. Создайте бота через [@BotFather](https://t.me/botfather)
-2. Добавьте бота в нужный чат/канал
-3. Отправьте любое сообщение боту
-4. Получите Chat ID через API:
+### Getting Telegram Chat ID
+1. Create a bot via [@BotFather](https://t.me/botfather)
+2. Add the bot to the desired chat/channel
+3. Send any message to the bot
+4. Get Chat ID via API:
 ```bash
-curl "https://api.telegram.org/bot<ВАШ_ТОКЕН>/getUpdates"
+curl "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"
 ```
 
-## Использование
+## Usage
 
-### Пример 1: Базовый запуск с мониторингом
+### Example 1: Basic monitoring setup
 ```bash
-# Установите переменные окружения
+# Set environment variables
 export TELEGRAM_TOKEN="123456:ABCdef"
 export CHAT_ID="-1001234567890"
 
-# Запустите бота
+# Run the bot
 python bot.py
 ```
 
-**Результат:**
+**Result:**
 ```
 🤖 OpenHands Monitor Bot is online and starting to poll.
 Starting polling loop...
 ```
 
-**Примеры уведомлений в Telegram:**
-- 🆕 New Task Started: "Разработка нового функционала" (ID: task_123)
-- 🔄 Task Status Update: "Разработка нового функционала" is now IN_PROGRESS.
-- 🔄 Task Status Update: "Разработка нового функционала" is now COMPLETED.
+**Example Telegram notifications:**
+- 🆕 New Task Started: "New feature development" (ID: task_123)
+- 🔄 Task Status Update: "New feature development" is now IN_PROGRESS.
+- 🔄 Task Status Update: "New feature development" is now COMPLETED.
 
-### Пример 2: Использование модуля map_maker.py
+### Example 2: Using the map_maker.py module
 ```python
 from map_maker import get_definitions
 
-# Получение определений из стандартного словаря
+# Get definitions from standard dictionary
 definitions = get_definitions("apple")
 print(definitions)
-# Вывод: ['A fruit that grows on trees', 'A technology company founded by Steve Jobs']
+# Output: ['A fruit that grows on trees', 'A technology company founded by Steve Jobs']
 
-# Использование пользовательского словаря
+# Using custom dictionary
 custom_dict = {
-    "openhands": ["Лучшая платформа для AI разработки"],
-    "python": ["Мой любимый язык программирования"]
+    "openhands": ["Best platform for AI development"],
+    "python": ["My favorite programming language"]
 }
 definitions = get_definitions("python", custom_dict)
 print(definitions)
-# Вывод: ['Мой любимый язык программирования']
+# Output: ['My favorite programming language']
 
-# Слово не найдено
+# Word not found
 definitions = get_definitions("nonexistent")
 print(definitions)
-# Вывод: []
+# Output: []
 ```
 
-### Пример 3: Настройка интервала опроса
-**Примечание**: Интервал опроса в текущей версии зафиксирован на 5 секундах в коде `bot.py`. Для изменения интервала необходимо отредактировать файл `bot.py` и изменить значение переменной `POLL_INTERVAL` на строке 12.
+### Example 3: Configuring polling interval
+**Note**: The polling interval in the current version is fixed at 5 seconds in the `bot.py` code. To change the interval, you need to edit the `bot.py` file and change the value of the `POLL_INTERVAL` variable on line 12.
 
-### Пример 4: Запуск с кастомным API URL
+### Example 4: Running with custom API URL
 ```bash
-export TELEGRAM_TOKEN="ваш_токен"
-export CHAT_ID="ваш_chat_id"
+export TELEGRAM_TOKEN="your_token"
+export CHAT_ID="your_chat_id"
 export OPENHANDS_API_URL="https://api.openhands.example.com"
 python bot.py
 ```
 
-### Пример 5: Docker Compose с кастомными настройками
+### Example 5: Docker Compose with custom settings
 ```yaml
 # docker-compose.custom.yml
 version: '3.8'
@@ -414,9 +414,9 @@ services:
       - OPENHANDS_API_URL=https://api.openhands.example.com
 ```
 
-## 📚 Описание API функций
+## 📚 API Documentation
 
-### Модуль `map_maker.py`
+### Module `map_maker.py`
 
 #### Функция `get_definitions(word: str, custom_dict: dict = None) -> list`
 
