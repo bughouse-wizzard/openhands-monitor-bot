@@ -48,7 +48,7 @@ This global instance is used by send_telegram_message function to send
 notifications to the configured chat."""
 
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
-async def send_telegram_message(message: str) -> None:
+async def send_telegram_message(message: str) -> bool:
     """
     Sends a message to the configured Telegram chat with retry logic.
 
@@ -63,12 +63,11 @@ async def send_telegram_message(message: str) -> None:
             Should be a non-empty string containing the notification text.
 
     Returns:
-        None: This function does not return a value. Success is indicated
-            by the absence of exceptions.
+        bool: True if the message was sent successfully. If all retry
+            attempts fail, a TelegramError exception is raised.
 
     Raises:
         TelegramError: If all retry attempts fail to send the message.
-            This exception is raised after 3 unsuccessful attempts.
 
     Note:
         This function uses the global TELEGRAM_TOKEN and CHAT_ID variables
@@ -76,11 +75,8 @@ async def send_telegram_message(message: str) -> None:
         Ensure these environment variables are properly set before calling
         this function.
     """
-    try:
-        await bot.send_message(chat_id=CHAT_ID, text=message)
-    except TelegramError as e:
-        print(f"Error sending Telegram message: {e}")
-        raise
+    await bot.send_message(chat_id=CHAT_ID, text=message)
+    return True
 
 async def fetch_conversations() -> list[dict] | None:
     """
