@@ -69,18 +69,24 @@ All configuration is done through environment variables. You can set them in a `
 #### Required Variables
 
 - `TELEGRAM_TOKEN`: Your Telegram bot token (required)
-  - Obtain from [@BotFather](https://t.me/botfather)
-  - Format: `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`
+  - **Purpose**: Authentication token for the Telegram Bot API
+  - **How to obtain**: Create a bot using [@BotFather](https://t.me/botfather) on Telegram
+  - **Format**: `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`
+  - **Example**: `TELEGRAM_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`
 
 - `CHAT_ID`: Telegram chat ID for notifications (required)
-  - Can be a user ID, group ID, or channel ID
-  - Use @userinfobot to find your chat ID
+  - **Purpose**: Identifier of the chat where notifications will be sent
+  - **Can be**: A user ID, group ID, or channel ID
+  - **How to find**: Use @userinfobot on Telegram to find your chat ID
+  - **Example**: `CHAT_ID=123456789`
 
 #### Optional Variables
 
 - `OPENHANDS_API_URL`: OpenHands API base URL
-  - Default: `http://host.docker.internal:3000`
-  - Format: `http://localhost:3000` or `https://api.openhands.example.com`
+  - **Purpose**: Base URL for the OpenHands API endpoint
+  - **Default**: `http://host.docker.internal:3000`
+  - **Format**: `http://localhost:3000` or `https://api.openhands.example.com`
+  - **Example**: `OPENHANDS_API_URL=http://localhost:3000`
 
 ### Polling Configuration
 
