@@ -79,7 +79,7 @@ async def send_telegram_message(message: str) -> None:
     try:
         await bot.send_message(chat_id=CHAT_ID, text=message)
     except TelegramError as e:
-        print(f"Error sending Telegram message: {e}")
+        logger.error(f"Error sending Telegram message: {e}")
         raise
 
 async def fetch_conversations() -> list[dict] | None:
@@ -123,11 +123,11 @@ async def fetch_conversations() -> list[dict] | None:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
-            print(f"HTTP error fetching conversations: {e}")
+            logger.error(f"HTTP error fetching conversations: {e}")
         except httpx.RequestError as e:
-            print(f"Request error fetching conversations: {e}")
+            logger.error(f"Request error fetching conversations: {e}")
         except ValueError as e:
-            print(f"JSON parsing error fetching conversations: {e}")
+            logger.error(f"JSON parsing error fetching conversations: {e}")
         return None
 
 async def poll_and_notify() -> None:
@@ -162,7 +162,7 @@ async def poll_and_notify() -> None:
         tracking conversation statuses across polling cycles.
     """
     global conversation_states
-    print("Starting polling loop...")
+    logger.info("Starting polling loop...")
 
     while True:
         await asyncio.sleep(POLL_INTERVAL)
@@ -229,6 +229,6 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, SystemExit):
-        print("Bot shutting down.")
+        logger.info("Bot shutting down.")
     except ValueError as e:
-        print(f"Configuration error: {e}")
+        logger.error(f"Configuration error: {e}")

@@ -270,15 +270,23 @@ async def test_send_telegram_message_failure():
             from telegram.error import TelegramError
             mock_bot_instance.send_message.side_effect = TelegramError("Test error")
             
-            import bot
-            
-            # Call function and check that RetryError is raised after 3 attempts
-            import tenacity
-            with pytest.raises(tenacity.RetryError):
-                await bot.send_telegram_message("Test message")
-            
-            # Verify send_message was called 3 times (due to retry)
-            assert mock_bot_instance.send_message.call_count == 3
+            # Patch logger to capture log messages
+            with patch('bot.logger') as mock_logger:
+                import bot
+                
+                # Call function and check that RetryError is raised after 3 attempts
+                import tenacity
+                with pytest.raises(tenacity.RetryError):
+                    await bot.send_telegram_message("Test message")
+                
+                # Verify send_message was called 3 times (due to retry)
+                assert mock_bot_instance.send_message.call_count == 3
+                
+                # Verify error was logged
+                mock_logger.error.assert_called()
+                call_args = mock_logger.error.call_args[0][0]
+                assert "Error sending Telegram message" in call_args
+                assert "Test error" in call_args
 
 
 @pytest.mark.asyncio
@@ -328,17 +336,15 @@ async def test_fetch_conversations_success():
 
 
 @pytest.mark.asyncio
-async def test_fetch_conversations_http_error():
-    """Тест обработки HTTP ошибки при получении бесед."""
-    # Удаляем модуль из кэша, если он уже был импортирован
+async def test_fetch_conversations_failure():
+    """Test fetch_conversations failure with HTTP error and logging."""
+    # Remove module from cache if already imported
     if 'bot' in sys.modules:
         del sys.modules['bot']
     
     with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
         with patch('telegram.Bot'):
-            import bot
-            
-            # Мокаем httpx.AsyncClient для вызова HTTPStatusError
+            # Mock httpx.AsyncClient to raise HTTPStatusError
             mock_client = AsyncMock()
             mock_client.__aenter__.return_value = mock_client
             mock_client.__aexit__.return_value = None
@@ -350,17 +356,26 @@ async def test_fetch_conversations_http_error():
                 response=Mock(status_code=500)
             )
             
-            with patch('httpx.AsyncClient', return_value=mock_client):
-                # Вызываем функцию
-                result = await bot.fetch_conversations()
-                
-                # Проверяем, что возвращается None при ошибке
-                assert result is None
+            # Patch logger to capture log messages
+            with patch('bot.logger') as mock_logger:
+                with patch('httpx.AsyncClient', return_value=mock_client):
+                    import bot
+                    
+                    # Call the function
+                    result = await bot.fetch_conversations()
+                    
+                    # Verify returns None on error
+                    assert result is None
+                    
+                    # Verify error was logged
+                    mock_logger.error.assert_called()
+                    call_args = mock_logger.error.call_args[0][0]
+                    assert "HTTP error fetching conversations" in call_args
 
 
 @pytest.mark.asyncio
-async def test_fetch_conversations_request_error():
-    """Тест обработки ошибки запроса при получении бесед."""
+async def test_fetch_conversations_network_error():
+    """Test fetch_conversations with network request error."""
     # Удаляем модуль из кэша, если он уже был импортирован
     if 'bot' in sys.modules:
         del sys.modules['bot']
@@ -384,6 +399,49 @@ async def test_fetch_conversations_request_error():
                 # Проверяем, что возвращается None при ошибке
                 assert result is None
 
+
+@pytest.mark.asyncio
+async def test_poll_and_notify():
+    """Test poll_and_notify function with new conversation detection."""
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Reset global state
+            bot.conversation_states.clear()
+            
+            # Mock fetch_conversations to return data
+            mock_conversations = [
+                {"id": "1", "title": "New Task", "status": "active"}
+            ]
+            
+            # Mock asyncio.sleep to break loop after first iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = mock_conversations
+                    
+                    # Run poll_and_notify and expect loop to break
+                    with pytest.raises(Exception, match="Break loop"):
+                        await bot.poll_and_notify()
+                    
+                    # Verify message was sent
+                    mock_bot_instance.send_message.assert_called_once_with(
+                        chat_id='test',
+                        text="🆕 New Task Started: New Task (ID: 1)"
+                    )
+                    
+                    # Verify state was updated
+                    assert bot.conversation_states == {"1": "active"}
+                    
+                    # Verify sleep was called with correct interval
+                    mock_sleep.assert_called_with(5)
 
 @pytest.mark.asyncio
 async def test_poll_and_notify_new_conversation():
@@ -985,8 +1043,8 @@ async def test_send_telegram_message_long_message():
 
 
 @pytest.mark.asyncio
-async def test_fetch_conversations_empty_response():
-    """Тест обработки пустого ответа от API."""
+async def test_fetch_conversations_empty():
+    """Test fetch_conversations with empty response from API."""
     # Удаляем модуль из кэша, если он уже был импортирован
     if 'bot' in sys.modules:
         del sys.modules['bot']
