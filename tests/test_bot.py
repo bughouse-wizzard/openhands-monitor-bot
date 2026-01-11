@@ -1019,9 +1019,13 @@ async def test_send_telegram_message_long_message():
 
 
 @pytest.mark.asyncio
-async def test_fetch_conversations_empty_response():
-    """Тест обработки пустого ответа от API."""
-    # Удаляем модуль из кэша, если он уже был импортирован
+async def test_fetch_conversations_empty():
+    """Test fetch_conversations when API returns an empty list.
+    
+    This test mocks the OpenHands API call to return an empty list
+    and asserts that the function returns an empty list.
+    """
+    # Remove module from cache if already imported
     if 'bot' in sys.modules:
         del sys.modules['bot']
 
@@ -1033,10 +1037,10 @@ async def test_fetch_conversations_empty_response():
         with patch('telegram.Bot'):
             import bot
             
-            # Создаем мок для httpx.AsyncClient
+            # Create mock for httpx.AsyncClient
             mock_response = Mock()
             mock_response.status_code = 200
-            mock_response.json.return_value = []  # Пустой список
+            mock_response.json.return_value = []  # Empty list
             
             async def mock_client_get(*args, **kwargs):
                 return mock_response
@@ -1047,12 +1051,12 @@ async def test_fetch_conversations_empty_response():
                 mock_client_class.return_value.__aenter__.return_value = mock_client_instance
                 mock_client_class.return_value.__aexit__.return_value = None
                 
-                # Вызываем функцию
+                # Call the function
                 result = await bot.fetch_conversations()
                 
-                # Проверяем результат
+                # Assert that the function returns an empty list
                 assert result == []
-                # Проверяем, что get был вызван с правильным URL
+                # Verify that get was called with the correct URL
                 mock_client_instance.get.assert_called_once_with("http://test-api:3000/api/conversations")
 
 
@@ -1750,6 +1754,62 @@ async def test_fetch_conversations_failure_task_requirement():
                 except requests.exceptions.RequestException:
                     # Or it might raise the exception
                     pass
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_no_new_conversations():
+    """
+    Test for poll_and_notify when there are no new conversations.
+    
+    This test mocks fetch_conversations to return the same list of conversations
+    as the previous poll and asserts that send_telegram_message is not called.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Clear global state
+            bot.conversation_states.clear()
+            
+            # Setup initial state with some conversations
+            initial_conversations = [
+                {"id": "123", "title": "Test Task 1", "status": "running"},
+                {"id": "456", "title": "Test Task 2", "status": "pending"}
+            ]
+            
+            # First, populate the conversation_states by simulating a previous poll
+            for conv in initial_conversations:
+                conv_id = conv["id"]
+                status = conv.get("status", "UNKNOWN")
+                bot.conversation_states[conv_id] = status
+            
+            # Mock asyncio.sleep to break the loop after one iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                # Mock fetch_conversations to return the same conversations
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = initial_conversations
+                    
+                    # Mock send_telegram_message to track calls
+                    with patch.object(bot, 'send_telegram_message', new_callable=AsyncMock) as mock_send:
+                        # Run poll_and_notify and expect it to break after one iteration
+                        with pytest.raises(Exception, match="Break loop"):
+                            await bot.poll_and_notify()
+                        
+                        # Verify fetch_conversations was called
+                        mock_fetch.assert_called_once()
+                        
+                        # Verify send_telegram_message was NOT called (no new conversations)
+                        mock_send.assert_not_called()
+                        
+                        # Verify conversation_states remains unchanged
+                        assert bot.conversation_states == {"123": "running", "456": "pending"}
+                        
+                        # Verify sleep was called
+                        mock_sleep.assert_called()
 
 
 
