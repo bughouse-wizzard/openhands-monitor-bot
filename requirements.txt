@@ -2,3 +2,9 @@ python-telegram-bot
 httpx
 tenacity
 asyncio
+
+# Testing dependencies (optional, for development)
+pytest
+pytest-asyncio
+pytest-cov
+coverage
