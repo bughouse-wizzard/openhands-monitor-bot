@@ -2,7 +2,25 @@
 
 A Telegram bot for monitoring OpenHands platform tasks and sending real-time notifications about task status changes.
 
+## Features
+
+- **Real-time Monitoring**: Continuously polls OpenHands API for conversation/task updates
+- **Status Change Detection**: Identifies new tasks, status changes, and completed tasks
+- **Telegram Notifications**: Sends instant notifications to configured Telegram chat
+- **Retry Logic**: Implements automatic retry for failed Telegram API calls
+- **State Tracking**: Maintains conversation state between polling cycles
+- **Error Handling**: Graceful handling of API errors and network issues
+
 ## Installation
+
+### Prerequisites
+
+- Python 3.8 or higher
+- Telegram Bot Token (obtain from [@BotFather](https://t.me/botfather))
+- Telegram Chat ID (where notifications will be sent)
+- OpenHands API access
+
+### Setup Steps
 
 1. **Clone the repository**:
    ```bash
@@ -25,15 +43,51 @@ A Telegram bot for monitoring OpenHands platform tasks and sending real-time not
 
 ## Usage
 
-Run the bot with:
+### Running the Bot
+
+Start the monitoring bot with:
 ```bash
 python bot.py
 ```
 
+The bot will:
+1. Validate configuration and environment variables
+2. Send a startup notification to Telegram
+3. Begin continuous polling of OpenHands API
+4. Send notifications for detected changes
+
+### Stopping the Bot
+
+Press `Ctrl+C` to gracefully stop the bot. A shutdown message will be displayed.
+
 ## Configuration
 
-### Required Environment Variables
+### Environment Variables
+
+All configuration is done through environment variables. You can set them in a `.env` file or export them in your shell.
+
+#### Required Variables
 
 - `TELEGRAM_TOKEN`: Your Telegram bot token (required)
+  - **Purpose**: Authentication token for the Telegram Bot API
+  - **How to obtain**: Create a bot using [@BotFather](https://t.me/botfather) on Telegram
+  - **Format**: `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`
+  - **Example**: `TELEGRAM_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz`
+
 - `CHAT_ID`: Telegram chat ID for notifications (required)
-- `OPENHANDS_API_URL`: OpenHands API base URL (optional, defaults to `http://host.docker.internal:3000`)
+  - **Purpose**: Identifier of the chat where notifications will be sent
+  - **Can be**: A user ID, group ID, or channel ID
+  - **How to find**: Use @userinfobot on Telegram to find your chat ID
+  - **Example**: `CHAT_ID=123456789`
+
+#### Optional Variables
+
+- `OPENHANDS_API_URL`: OpenHands API base URL
+  - **Purpose**: Base URL for the OpenHands API endpoint
+  - **Default**: `http://host.docker.internal:3000`
+  - **Format**: `http://localhost:3000` or `https://api.openhands.example.com`
+  - **Example**: `OPENHANDS_API_URL=http://localhost:3000`
+
+### Polling Configuration
+
+The polling interval is hardcoded in `bot.py` as `POLL_INTERVAL = 5` (seconds). You can modify this value in the source code if needed.
