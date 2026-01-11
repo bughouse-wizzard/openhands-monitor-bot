@@ -6,54 +6,175 @@
 
 A monitoring bot for tracking tasks in the OpenHands platform with Telegram notifications.
 
-## 📁 Структура проекта
+## 📋 Table of Contents
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Overview](#overview)
+- [API Documentation](#api-documentation)
+- [Production Deployment](#production-deployment)
+- [Monitoring and Logging](#monitoring-and-logging)
+- [Troubleshooting](#troubleshooting)
+- [Security](#security)
+- [Performance](#performance)
+- [Development](#development)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [Support and Maintenance](#support-and-maintenance)
+- [FAQ](#frequently-asked-questions-faq)
+- [License](#license)
+- [Contacts](#contacts)
+
+## Installation
+
+### Prerequisites
+- Python 3.11 or higher
+- Docker and Docker Compose (for containerization)
+- Telegram account with a bot created via [@BotFather](https://t.me/botfather)
+
+### Step-by-Step Installation
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
+   cd openhands-monitor-bot
+   ```
+
+2. **Install Python dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Configure environment variables**:
+   Create a `.env` file in the project root with the following variables:
+   ```bash
+   TELEGRAM_TOKEN=your_telegram_bot_token
+   CHAT_ID=your_telegram_chat_id
+   OPENHANDS_API_URL=http://localhost:3000  # or your OpenHands API URL
+   ```
+
+### Docker Installation
+If you prefer using Docker, you can build and run the container:
+```bash
+docker build -t openhands-monitor .
+```
+
+## Usage
+
+### Running the Bot
+
+#### Method 1: Direct Python execution
+```bash
+python bot.py
+```
+
+#### Method 2: Using Docker Compose
+```bash
+docker-compose up -d
+```
+
+#### Method 3: Manual Docker run
+```bash
+docker run -d \
+  --name openhands-monitor \
+  --network host \
+  -e TELEGRAM_TOKEN="your_token" \
+  -e CHAT_ID="your_chat_id" \
+  -e OPENHANDS_API_URL="http://localhost:3000" \
+  openhands-monitor
+```
+
+### What to Expect
+Once running, the bot will:
+1. Send a startup notification to Telegram: "🤖 OpenHands Monitor Bot is online and starting to poll."
+2. Begin polling the OpenHands API every 5 seconds (configurable in `bot.py`)
+3. Send notifications for:
+   - New tasks started
+   - Task status changes
+   - Task completions
+
+## Configuration
+
+### Required Environment Variables
+
+| Variable | Description | Required | Default Value | Example |
+|----------|-------------|----------|---------------|---------|
+| `TELEGRAM_TOKEN` | Your Telegram bot token | Yes | None | `1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
+| `CHAT_ID` | Telegram chat ID for notifications | Yes | None | `-1001234567890` |
+| `OPENHANDS_API_URL` | OpenHands API base URL | No | `http://host.docker.internal:3000` | `http://localhost:3000` or `https://api.openhands.example.com` |
+
+### Obtaining Telegram Credentials
+
+1. **Create a Telegram bot**:
+   - Message [@BotFather](https://t.me/botfather) on Telegram
+   - Use `/newbot` command to create a new bot
+   - Save the token provided by BotFather
+
+2. **Get Chat ID**:
+   - Add your bot to the desired chat/channel
+   - Send any message to the bot
+   - Use the following command to get updates (replace `<YOUR_TOKEN>`):
+     ```bash
+     curl "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"
+     ```
+   - Look for the `chat.id` field in the response
+
+### Configuration Notes
+- For Docker containers without `network_mode: host`, use `http://host.docker.internal:3000`
+- For Docker with `network_mode: host`, use `http://localhost:3000`
+- For local execution without Docker, use `http://localhost:3000`
+- For production, use the full URL of your OpenHands API server
+
+## Project Structure
 
 ```
 openhands-monitor-bot/
-├── bot.py              # Основной модуль мониторинга задач OpenHands
-├── map_maker.py        # Модуль работы с определениями слов
-├── requirements.txt    # Зависимости Python
-├── Dockerfile         # Конфигурация Docker контейнера
-├── docker-compose.yml # Конфигурация Docker Compose
-├── tests/             # Тесты
+├── bot.py              # Main OpenHands task monitoring module
+├── map_maker.py        # Word definitions module
+├── requirements.txt    # Python dependencies
+├── Dockerfile         # Docker container configuration
+├── docker-compose.yml # Docker Compose configuration
+├── tests/             # Tests
 │   ├── __init__.py
 │   ├── test_bot.py
 │   └── test_map_maker.py
-├── README.md          # Документация (этот файл)
-├── LICENSE            # Лицензия MIT
-└── Implementation Plan.md  # План реализации
+├── README.md          # Documentation (this file)
+├── LICENSE            # MIT License
+└── Implementation Plan.md  # Implementation plan
 ```
 
-### Описание файлов проекта
+### Project File Descriptions
 
-#### **bot.py** - Основной модуль мониторинга
-- Асинхронный бот для мониторинга задач OpenHands
-- Отправляет уведомления в Telegram о новых задачах и изменениях статуса
-- Использует `asyncio` для эффективного опроса API
-- Конфигурируется через переменные окружения
+#### **bot.py** - Main Monitoring Module
+- Asynchronous bot for monitoring OpenHands tasks
+- Sends Telegram notifications about new tasks and status changes
+- Uses `asyncio` for efficient API polling
+- Configured through environment variables
 
-#### **map_maker.py** - Модуль словаря
-- Функция `get_definitions()` для получения определений слов
-- Поддерживает стандартный и пользовательские словари
-- Регистронезависимый поиск с нормализацией входных данных
-- Полное тестовое покрытие
+#### **map_maker.py** - Dictionary Module
+- `get_definitions()` function for retrieving word definitions
+- Supports standard and custom dictionaries
+- Case-insensitive search with input normalization
+- Complete test coverage
 
-#### **requirements.txt** - Зависимости Python
+#### **requirements.txt** - Python Dependencies
 
-Файл `requirements.txt` содержит все необходимые Python-зависимости для работы проекта. Этот файл используется системой управления зависимостями pip для установки всех необходимых пакетов.
+The `requirements.txt` file contains all necessary Python dependencies for the project. This file is used by the pip dependency management system to install all required packages.
 
-**Содержимое файла:**
+**File contents:**
 ```txt
-python-telegram-bot  # Интеграция с Telegram API - основной пакет для работы с Telegram Bot API
-httpx                # Асинхронные HTTP-запросы - современная альтернатива requests с поддержкой async/await
-tenacity             # Механизмы повторных попыток - библиотека для реализации retry-логики при сбоях
-asyncio              # Асинхронное программирование - встроенная библиотека Python для асинхронного кода
+python-telegram-bot  # Telegram API integration - main package for working with Telegram Bot API
+httpx                # Asynchronous HTTP requests - modern alternative to requests with async/await support
+tenacity             # Retry mechanisms - library for implementing retry logic on failures
+asyncio              # Asynchronous programming - built-in Python library for asynchronous code
 
-# Тестовые зависимости (опционально, для разработки)
-pytest               # Фреймворк для написания и запуска тестов
-pytest-asyncio       # Поддержка асинхронных тестов в pytest
-pytest-cov           # Интеграция с coverage для измерения покрытия кода тестами
-coverage             # Инструмент для анализа покрытия кода тестами
+# Test dependencies (optional, for development)
+pytest               # Framework for writing and running tests
+pytest-asyncio       # Asynchronous test support in pytest
+pytest-cov           # Coverage integration for measuring code test coverage
+coverage             # Tool for analyzing code test coverage
 ```
 
 **Назначение каждой зависимости:**

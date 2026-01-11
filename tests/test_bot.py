@@ -231,8 +231,8 @@ def test_default_api_url():
 
 @pytest.mark.asyncio
 async def test_send_telegram_message_success():
-    """Тест успешной отправки сообщения в Telegram."""
-    # Удаляем модуль из кэша, если он уже был импортирован
+    """Test successful sending of Telegram message."""
+    # Remove module from cache if already imported
     if 'bot' in sys.modules:
         del sys.modules['bot']
     
@@ -243,11 +243,11 @@ async def test_send_telegram_message_success():
             
             import bot
             
-            # Вызываем функцию
+            # Call the function
             test_message = "Test message"
             await bot.send_telegram_message(test_message)
             
-            # Проверяем, что send_message был вызван с правильными параметрами
+            # Verify send_message was called with correct parameters
             mock_bot_instance.send_message.assert_called_once_with(
                 chat_id='test', 
                 text=test_message
@@ -255,9 +255,9 @@ async def test_send_telegram_message_success():
 
 
 @pytest.mark.asyncio
-async def test_send_telegram_message_telegram_error():
-    """Тест обработки ошибки Telegram при отправке сообщения."""
-    # Удаляем модуль из кэша, если он уже был импортирован
+async def test_send_telegram_message_failure():
+    """Test Telegram message sending failure with error logging."""
+    # Remove module from cache if already imported
     if 'bot' in sys.modules:
         del sys.modules['bot']
     
@@ -266,18 +266,18 @@ async def test_send_telegram_message_telegram_error():
             mock_bot_instance = AsyncMock()
             mock_bot_class.return_value = mock_bot_instance
             
-            # Настраиваем мок, чтобы он вызывал исключение
+            # Configure mock to raise exception
             from telegram.error import TelegramError
             mock_bot_instance.send_message.side_effect = TelegramError("Test error")
             
             import bot
             
-            # Вызываем функцию и проверяем, что RetryError пробрасывается после 3 попыток
+            # Call function and check that RetryError is raised after 3 attempts
             import tenacity
             with pytest.raises(tenacity.RetryError):
                 await bot.send_telegram_message("Test message")
             
-            # Проверяем, что send_message был вызван 3 раза (из-за retry)
+            # Verify send_message was called 3 times (due to retry)
             assert mock_bot_instance.send_message.call_count == 3
 
 

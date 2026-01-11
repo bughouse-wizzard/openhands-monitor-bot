@@ -13,10 +13,15 @@ Key components:
 
 import os
 import asyncio
+import logging
 import httpx
 from tenacity import retry, stop_after_attempt, wait_fixed
 from telegram import Bot
 from telegram.error import TelegramError
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # --- Configuration ---
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
