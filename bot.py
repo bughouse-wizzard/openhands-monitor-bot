@@ -59,7 +59,7 @@ async def send_telegram_message(message: str) -> bool:
         message (str): The message content to send to the Telegram chat.
 
     Returns:
-        bool: True if the message was sent successfully, False otherwise.
+        bool: True if the message was sent successfully.
 
     Raises:
         telegram.error.TelegramError: If all retry attempts fail to send the message.
@@ -67,7 +67,7 @@ async def send_telegram_message(message: str) -> bool:
     await bot.send_message(chat_id=CHAT_ID, text=message)
     return True
 
-async def fetch_conversations() -> list[dict] | None:
+async def fetch_conversations() -> list[dict]:
     """
     Fetches all conversations from the OpenHands API.
 
@@ -77,9 +77,9 @@ async def fetch_conversations() -> list[dict] | None:
     failures.
 
     Returns:
-        list[dict] | None: A list of conversation dictionaries if successful,
-            None if an error occurs. Each dictionary contains conversation
-            metadata including 'id', 'title', and 'status' fields.
+        list[dict]: A list of conversation dictionaries if successful,
+            or an empty list [] if an error occurs. Each dictionary contains
+            conversation metadata including 'id', 'title', and 'status' fields.
 
     Raises:
         httpx.HTTPStatusError: If the API returns an HTTP error status (4xx, 5xx).
@@ -97,7 +97,7 @@ async def fetch_conversations() -> list[dict] | None:
             logger.error(f"Request error fetching conversations: {e}")
         except ValueError as e:
             logger.error(f"JSON parsing error fetching conversations: {e}")
-        return None
+        return []
 
 async def poll_and_notify() -> None:
     """
@@ -110,6 +110,9 @@ async def poll_and_notify() -> None:
     - Removed conversations: Cleans up internal state when tasks are removed
 
     The polling interval is controlled by the POLL_INTERVAL constant (default: 5 seconds).
+
+    Returns:
+        None: This function runs indefinitely and does not return.
 
     Note:
         This function modifies the global `conversation_states` dictionary to
@@ -161,6 +164,9 @@ async def main() -> None:
         CHAT_ID (str): Telegram chat ID where notifications will be sent.
         OPENHANDS_API_URL (str, optional): OpenHands API base URL.
             Defaults to 'http://host.docker.internal:3000'.
+
+    Returns:
+        None: This function runs indefinitely and does not return.
 
     Raises:
         ValueError: If TELEGRAM_TOKEN or CHAT_ID environment variables are not set.

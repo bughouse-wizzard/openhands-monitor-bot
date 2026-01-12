@@ -49,7 +49,13 @@ pip install -r requirements.txt
 
 ### Configuring the `.env` File
 
-Create a `.env` file in the project root with the necessary environment variables:
+Copy the `.env.example` file to `.env` and update it with your actual values:
+
+```bash
+cp .env.example .env
+```
+
+Then edit the `.env` file to set the necessary environment variables:
 
 ```bash
 TELEGRAM_TOKEN=your_telegram_bot_token
