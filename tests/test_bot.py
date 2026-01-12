@@ -9,7 +9,7 @@ import pytest
 import asyncio
 import sys
 import os
-from unittest.mock import AsyncMock, Mock, patch, MagicMock
+from unittest.mock import AsyncMock, Mock, patch, MagicMock, call
 
 # Добавляем родительскую директорию в путь для импорта
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -354,8 +354,8 @@ async def test_fetch_conversations_http_error():
                 # Вызываем функцию
                 result = await bot.fetch_conversations()
                 
-                # Проверяем, что возвращается None при ошибке
-                assert result is None
+                # Проверяем, что возвращается пустой список при ошибке
+                assert result == []
 
 
 @pytest.mark.asyncio
@@ -381,8 +381,8 @@ async def test_fetch_conversations_request_error():
                 # Вызываем функцию
                 result = await bot.fetch_conversations()
                 
-                # Проверяем, что возвращается None при ошибке
-                assert result is None
+                # Проверяем, что возвращается пустой список при ошибке
+                assert result == []
 
 
 @pytest.mark.asyncio
@@ -415,8 +415,8 @@ async def test_fetch_conversations_failure():
                 # Call the function
                 result = await bot.fetch_conversations()
                 
-                # Verify that None is returned on error
-                assert result is None
+                # Verify that empty list is returned on error
+                assert result == []
 
 
 @pytest.mark.asyncio
@@ -1086,8 +1086,8 @@ async def test_fetch_conversations_invalid_json():
                 # Вызываем функцию
                 result = await bot.fetch_conversations()
                 
-                # Проверяем, что возвращается None при ошибке парсинга JSON
-                assert result is None
+                # Проверяем, что возвращается пустой список при ошибке парсинга JSON
+                assert result == []
 
 
 @pytest.mark.asyncio
@@ -1414,8 +1414,8 @@ async def test_fetch_conversations_timeout_error():
                 # Вызываем функцию
                 result = await bot.fetch_conversations()
                 
-                # Проверяем, что возвращается None при ошибке таймаута
-                assert result is None
+                # Проверяем, что возвращается пустой список при ошибке таймаута
+                assert result == []
 
 
 @pytest.mark.asyncio
@@ -1746,11 +1746,11 @@ async def test_fetch_conversations_failure_task_requirement():
                 mock_fetch.side_effect = requests.exceptions.RequestException("API Error")
                 
                 # Call the function and check it handles exception gracefully
-                # Note: The actual function returns None on error
+                # Note: The actual function returns empty list on error
                 try:
                     result = await bot.fetch_conversations()
-                    # If no exception, result should be None
-                    assert result is None
+                    # If no exception, result should be empty list
+                    assert result == []
                 except requests.exceptions.RequestException:
                     # Or it might raise the exception
                     pass
@@ -1812,5 +1812,60 @@ async def test_poll_and_notify_no_new_conversations():
                         mock_sleep.assert_called()
 
 
+@pytest.mark.asyncio
+async def test_poll_and_notify_new_conversations():
+    """
+    Test for poll_and_notify when there are new conversations.
+    
+    This test mocks fetch_conversations to return new conversations
+    and asserts that send_telegram_message is called with the correct message.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Clear global state
+            bot.conversation_states.clear()
+            
+            # Setup new conversations that don't exist in conversation_states
+            new_conversations = [
+                {"id": "123", "title": "New Task 1", "status": "running"},
+                {"id": "456", "title": "New Task 2", "status": "pending"}
+            ]
+            
+            # Mock asyncio.sleep to break the loop after one iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]) as mock_sleep:
+                # Mock fetch_conversations to return new conversations
+                with patch.object(bot, 'fetch_conversations', new_callable=AsyncMock) as mock_fetch:
+                    mock_fetch.return_value = new_conversations
+                    
+                    # Mock send_telegram_message to track calls
+                    with patch.object(bot, 'send_telegram_message', new_callable=AsyncMock) as mock_send:
+                        # Run poll_and_notify and expect it to break after one iteration
+                        with pytest.raises(Exception, match="Break loop"):
+                            await bot.poll_and_notify()
+                        
+                        # Verify fetch_conversations was called
+                        mock_fetch.assert_called_once()
+                        
+                        # Verify send_telegram_message was called twice (once for each new conversation)
+                        assert mock_send.call_count == 2
+                        
+                        # Verify the correct messages were sent
+                        expected_calls = [
+                            call("🆕 New Task Started: New Task 1 (ID: 123)"),
+                            call("🆕 New Task Started: New Task 2 (ID: 456)")
+                        ]
+                        mock_send.assert_has_calls(expected_calls, any_order=True)
+                        
+                        # Verify conversation_states was updated
+                        assert bot.conversation_states == {"123": "running", "456": "pending"}
+                        
+                        # Verify sleep was called
+                        mock_sleep.assert_called()
 
 
