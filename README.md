@@ -30,7 +30,7 @@ This bot helps teams stay informed about their OpenHands tasks without needing t
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
+git clone <repository_url>
 cd openhands-monitor-bot
 ```
 
@@ -52,7 +52,12 @@ pip install -r requirements.txt
    nano .env  # or use your preferred text editor
    ```
 
-3. Set the required environment variables (see Configuration section below).
+3. Set the required environment variables including:
+   - **Telegram bot token** (`TELEGRAM_TOKEN`): Your Telegram Bot API token
+   - **OpenHands API URL** (`OPENHANDS_API_URL`): The base URL for OpenHands API
+   - **Chat ID** (`CHAT_ID`): Your Telegram chat ID
+
+   See the Configuration section below for detailed information about all required variables.
 
 ## Usage
 
