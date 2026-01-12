@@ -13,6 +13,7 @@ import pytest
 import asyncio
 import sys
 import os
+import logging
 from unittest.mock import AsyncMock, Mock, patch, MagicMock, call
 
 # Add parent directory to path for imports
@@ -1982,5 +1983,349 @@ async def test_example_poll_and_notify_with_mocks():
                     
                     # Verify conversation_states was updated
                     assert bot.conversation_states == {"789": "running"}
+
+
+# ============================================================================
+# TASK 2: Tests for poll_and_notify function
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_success():
+    """
+    Test successful polling and notification with status changes.
+    
+    This test verifies that:
+    1. fetch_conversations is called and returns conversations
+    2. send_telegram_message is called for new conversations
+    3. send_telegram_message is called for status changes
+    4. conversation_states is updated correctly
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Reset conversation states for clean test
+            bot.conversation_states.clear()
+            
+            # Mock asyncio.sleep to break the loop after first iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                # Mock fetch_conversations to return sample conversations
+                with patch('bot.fetch_conversations') as mock_fetch:
+                    # Mock send_telegram_message to track calls
+                    with patch('bot.send_telegram_message') as mock_send:
+                        # Configure mock to return conversations with specific status
+                        mock_fetch.return_value = [
+                            {"id": "conv1", "title": "Task 1", "status": "running"},
+                            {"id": "conv2", "title": "Task 2", "status": "pending"}
+                        ]
+                        
+                        # Configure send_telegram_message to simulate success
+                        mock_send.return_value = True
+                        
+                        # Run poll_and_notify (will break after first iteration)
+                        try:
+                            await bot.poll_and_notify()
+                        except Exception as e:
+                            if str(e) != "Break loop":
+                                raise
+                        
+                        # Assert that fetch_conversations was called
+                        mock_fetch.assert_called_once()
+                        
+                        # Assert that send_telegram_message was called twice (for 2 new conversations)
+                        assert mock_send.call_count == 2
+                        
+                        # Check specific calls
+                        expected_calls = [
+                            call("🆕 New Task Started: Task 1 (ID: conv1)"),
+                            call("🆕 New Task Started: Task 2 (ID: conv2)")
+                        ]
+                        mock_send.assert_has_calls(expected_calls, any_order=True)
+                        
+                        # Assert conversation_states was updated
+                        assert bot.conversation_states == {
+                            "conv1": "running",
+                            "conv2": "pending"
+                        }
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_no_changes():
+    """
+    Test polling when there are no status changes.
+    
+    This test verifies that:
+    1. fetch_conversations is called and returns conversations
+    2. send_telegram_message is NOT called when there are no status changes
+    3. conversation_states remains unchanged
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Set up initial conversation states
+            bot.conversation_states.clear()
+            bot.conversation_states["conv1"] = "running"
+            bot.conversation_states["conv2"] = "pending"
+            
+            # Mock asyncio.sleep to break the loop after first iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                # Mock fetch_conversations to return conversations with same status
+                with patch('bot.fetch_conversations') as mock_fetch:
+                    # Mock send_telegram_message to track calls
+                    with patch('bot.send_telegram_message') as mock_send:
+                        # Configure mock to return conversations with same status as before
+                        mock_fetch.return_value = [
+                            {"id": "conv1", "title": "Task 1", "status": "running"},
+                            {"id": "conv2", "title": "Task 2", "status": "pending"}
+                        ]
+                        
+                        # Run poll_and_notify (will break after first iteration)
+                        try:
+                            await bot.poll_and_notify()
+                        except Exception as e:
+                            if str(e) != "Break loop":
+                                raise
+                        
+                        # Assert that fetch_conversations was called
+                        mock_fetch.assert_called_once()
+                        
+                        # Assert that send_telegram_message was NOT called (no changes)
+                        mock_send.assert_not_called()
+                        
+                        # Assert conversation_states remains unchanged
+                        assert bot.conversation_states == {
+                            "conv1": "running",
+                            "conv2": "pending"
+                        }
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_failure():
+    """
+    Test polling when fetch_conversations fails.
+    
+    This test verifies that:
+    1. fetch_conversations returns empty list on error
+    2. The function handles the error appropriately (logs error and continues)
+    3. send_telegram_message is not called
+    4. conversation_states remains unchanged
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Set up initial conversation states
+            bot.conversation_states.clear()
+            bot.conversation_states["conv1"] = "running"
+            
+            # Mock asyncio.sleep to break the loop after first iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                # Mock fetch_conversations to return empty list (simulating error)
+                with patch('bot.fetch_conversations') as mock_fetch:
+                    # Mock send_telegram_message to track calls
+                    with patch('bot.send_telegram_message') as mock_send:
+                        # Configure mock to return empty list (simulating API failure)
+                        mock_fetch.return_value = []
+                        
+                        # Run poll_and_notify (will break after first iteration)
+                        try:
+                            await bot.poll_and_notify()
+                        except Exception as e:
+                            if str(e) != "Break loop":
+                                raise
+                        
+                        # Assert that fetch_conversations was called
+                        mock_fetch.assert_called_once()
+                        
+                        # Assert that send_telegram_message was NOT called
+                        mock_send.assert_not_called()
+                        
+                        # Assert conversation_states remains unchanged
+                        assert bot.conversation_states == {"conv1": "running"}
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_empty_list():
+    """
+    Test polling when fetch_conversations returns empty list.
+    
+    This test verifies that:
+    1. fetch_conversations returns empty list
+    2. The function continues polling without sending notifications
+    3. send_telegram_message is not called
+    4. Old conversations are cleaned up
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Set up initial conversation states
+            bot.conversation_states.clear()
+            bot.conversation_states["old_conv"] = "completed"
+            
+            # Mock asyncio.sleep to break the loop after first iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                # Mock fetch_conversations to return empty list
+                with patch('bot.fetch_conversations') as mock_fetch:
+                    # Mock send_telegram_message to track calls
+                    with patch('bot.send_telegram_message') as mock_send:
+                        # Configure mock to return empty list
+                        mock_fetch.return_value = []
+                        
+                        # Run poll_and_notify (will break after first iteration)
+                        try:
+                            await bot.poll_and_notify()
+                        except Exception as e:
+                            if str(e) != "Break loop":
+                                raise
+                        
+                        # Assert that fetch_conversations was called
+                        mock_fetch.assert_called_once()
+                        
+                        # Assert that send_telegram_message was NOT called
+                        mock_send.assert_not_called()
+                        
+                        # Assert old conversation was cleaned up
+                        assert "old_conv" not in bot.conversation_states
+                        assert bot.conversation_states == {}
+
+
+# ============================================================================
+# TASK 2: Tests for main function (integration test)
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_main_initialization():
+    """
+    Integration test for main function initialization and setup/teardown.
+    
+    This test verifies that:
+    1. main function initializes correctly with environment variables
+    2. send_telegram_message is called with startup message
+    3. poll_and_notify is started
+    4. Proper cleanup is performed
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Mock poll_and_notify to prevent infinite loop
+            mock_poll = AsyncMock()
+            
+            # Mock send_telegram_message to track startup message
+            mock_send = AsyncMock()
+            mock_send.return_value = True
+            
+            # Use asyncio.create_task to run main in a separate task
+            with patch.object(bot, 'poll_and_notify', mock_poll):
+                with patch.object(bot, 'send_telegram_message', mock_send):
+                    # Create task for main function
+                    task = asyncio.create_task(bot.main())
+                    
+                    # Allow main to run for a short duration
+                    await asyncio.sleep(0.1)
+                    
+                    # Cancel the task to stop execution
+                    task.cancel()
+                    
+                    # Handle cancellation
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
+                    
+                    # Assert that send_telegram_message was called with startup message
+                    mock_send.assert_called_once_with(
+                        "🤖 OpenHands Monitor Bot is online and starting to poll."
+                    )
+                    
+                    # Assert that poll_and_notify was called
+                    mock_poll.assert_called_once()
+                    
+                    # Verify logging is configured (check that logger exists)
+                    assert hasattr(bot, 'logger')
+                    assert isinstance(bot.logger, logging.Logger)
+
+
+@pytest.mark.asyncio
+async def test_main_missing_environment_variables_error():
+    """
+    Test main function raises ValueError when environment variables are missing.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {}, clear=True):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Test that ValueError is raised when environment variables are missing
+            with pytest.raises(ValueError) as exc_info:
+                await bot.main()
+            
+            # Verify the error message
+            assert "TELEGRAM_TOKEN and CHAT_ID environment variables must be set" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_main_with_keyboard_interrupt():
+    """
+    Test main function handles KeyboardInterrupt gracefully.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Mock poll_and_notify to raise KeyboardInterrupt
+            mock_poll = AsyncMock()
+            mock_poll.side_effect = KeyboardInterrupt()
+            
+            # Mock send_telegram_message
+            mock_send = AsyncMock()
+            mock_send.return_value = True
+            
+            with patch.object(bot, 'poll_and_notify', mock_poll):
+                with patch.object(bot, 'send_telegram_message', mock_send):
+                    # Run main - should handle KeyboardInterrupt gracefully
+                    # KeyboardInterrupt is caught in the if __name__ == "__main__" block,
+                    # not in the main function itself
+                    try:
+                        await bot.main()
+                    except KeyboardInterrupt:
+                        # This is expected since KeyboardInterrupt is raised by mock
+                        pass
+                    
+                    # Verify functions were called
+                    mock_send.assert_called_once()
+                    mock_poll.assert_called_once()
 
 
