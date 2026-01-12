@@ -48,38 +48,35 @@ This global instance is used by send_telegram_message function to send
 notifications to the configured chat."""
 
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
-async def send_telegram_message(message: str) -> bool:
+async def send_telegram_message(message: str) -> None:
     """
-    Sends a message to the configured Telegram chat with retry logic.
+    Sends a message to the configured Telegram chat.
 
-    This function uses the `tenacity` library to automatically retry failed
-    Telegram API calls up to 3 times with 2-second intervals between attempts.
+    This function sends a message to the Telegram chat specified by the
+    CHAT_ID environment variable using the Telegram Bot API.
 
     Args:
         message (str): The message content to send to the Telegram chat.
 
     Returns:
-        bool: True if the message was sent successfully.
-
-    Raises:
-        telegram.error.TelegramError: If all retry attempts fail to send the message.
+        None: This function does not return a value.
     """
     await bot.send_message(chat_id=CHAT_ID, text=message)
-    return True
 
 async def fetch_conversations() -> list[dict]:
     """
-    Fetches all conversations from the OpenHands API.
+    Fetches conversations from the OpenHands API.
 
     Makes an asynchronous HTTP GET request to the OpenHands API endpoint
-    to retrieve the current list of conversations/tasks. Handles various
-    error conditions including HTTP errors, network issues, and JSON parsing
-    failures.
+    to retrieve the current list of conversations/tasks.
 
     Returns:
-        list[dict]: A list of conversation dictionaries if successful,
-            or an empty list [] if an error occurs. Each dictionary contains
-            conversation metadata including 'id', 'title', and 'status' fields.
+        list[dict]: A list of conversation objects if successful,
+            or an empty list [] if an error occurs. Each conversation object
+            is a dictionary containing the following fields:
+            - id (str): Unique identifier for the conversation
+            - title (str): Title or description of the conversation/task
+            - status (str): Current status of the conversation (e.g., 'running', 'completed')
 
     Raises:
         httpx.HTTPStatusError: If the API returns an HTTP error status (4xx, 5xx).
@@ -104,19 +101,12 @@ async def poll_and_notify() -> None:
     The main polling loop to monitor conversation state changes.
 
     This function runs indefinitely, periodically fetching conversations from
-    the OpenHands API and comparing them with the previous state. It detects:
-    - New conversations: Sends notification when a new task appears
-    - Status changes: Sends notification when a task's status changes
-    - Removed conversations: Cleans up internal state when tasks are removed
-
-    The polling interval is controlled by the POLL_INTERVAL constant (default: 5 seconds).
+    the OpenHands API using `fetch_conversations()` and comparing them with
+    the previous state. When changes are detected (new conversations or status
+    changes), it sends notifications using `send_telegram_message()`.
 
     Returns:
         None: This function runs indefinitely and does not return.
-
-    Note:
-        This function modifies the global `conversation_states` dictionary to
-        track conversation states between polling cycles.
     """
     global conversation_states
     logger.info("Starting polling loop...")
@@ -154,22 +144,12 @@ async def main() -> None:
     """
     Initializes and runs the OpenHands Monitor Bot.
 
-    This is the main entry point for the bot application. It performs the following:
-    1. Validates that required environment variables are set
-    2. Sends a startup notification to the configured Telegram chat
-    3. Enters the main polling loop to monitor conversation changes
-
-    Environment Variables:
-        TELEGRAM_TOKEN (str): Telegram Bot API token for authentication.
-        CHAT_ID (str): Telegram chat ID where notifications will be sent.
-        OPENHANDS_API_URL (str, optional): OpenHands API base URL.
-            Defaults to 'http://host.docker.internal:3000'.
+    This function validates that required environment variables are set,
+    sends a startup notification to Telegram, and then enters the main
+    polling loop by calling `poll_and_notify()`.
 
     Returns:
         None: This function runs indefinitely and does not return.
-
-    Raises:
-        ValueError: If TELEGRAM_TOKEN or CHAT_ID environment variables are not set.
     """
     if not all([TELEGRAM_TOKEN, CHAT_ID]):
         raise ValueError("TELEGRAM_TOKEN and CHAT_ID environment variables must be set.")
