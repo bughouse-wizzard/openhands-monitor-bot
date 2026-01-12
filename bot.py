@@ -9,6 +9,11 @@ Key components:
 - Asynchronous polling of OpenHands API
 - State tracking for conversation changes
 - Telegram notification system with error handling
+
+Documentation:
+- All functions include Google-style docstrings with Args, Returns, and Raises sections
+- Module and variable-level documentation follows project standards
+- Type hints are provided for all function signatures
 """
 
 import os

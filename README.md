@@ -139,7 +139,7 @@ pytest tests/
 
 This project follows:
 - **PEP 8** for Python code style
-- **Google Style** docstrings for documentation
+- **Google Style** docstrings for documentation (all functions in `bot.py` include comprehensive docstrings with Args, Returns, and Raises sections)
 - **Type hints** for all function signatures
 
 ## Troubleshooting
