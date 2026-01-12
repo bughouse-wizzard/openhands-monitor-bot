@@ -52,3 +52,11 @@ htmlcov/
 
 # Docker
 docker-compose.override.yml
+
+# Backup files
+*_backup.py
+*_old.py
+*_backup*
+*_old*
+*.bak
+*.backup
