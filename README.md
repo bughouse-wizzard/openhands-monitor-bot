@@ -1,140 +1,184 @@
 # OpenHands Monitor Bot
 
-## Project Title & Description
+## Project Description
 
-The OpenHands Monitor Bot is a Telegram bot that monitors OpenHands platform tasks and sends real-time notifications about task status changes. It continuously polls the OpenHands API for conversation/task updates and alerts users about new tasks, status changes, and task completions via Telegram messages.
+The OpenHands Monitor Bot is a Telegram bot designed to monitor OpenHands platform tasks and send real-time notifications about task status changes. It continuously polls the OpenHands API for conversation/task updates and alerts users about:
 
-## Table of Contents
-- [Project Title & Description](#project-title--description)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Development](#development)
-- [Testing](#testing)
-- [License](#license)
+- **New tasks** being created
+- **Status changes** (e.g., from "running" to "completed")
+- **Task completions**
+
+This bot helps teams stay informed about their OpenHands tasks without needing to constantly check the platform manually.
 
 ## Features
 
-- **Real-time Monitoring**: Continuously polls OpenHands API for task updates
-- **Status Change Detection**: Identifies when task status changes (e.g., from "running" to "completed")
-- **Telegram Notifications**: Sends instant alerts to configured Telegram chat
-- **Retry Logic**: Implements automatic retry for failed Telegram API calls
-- **State Tracking**: Maintains conversation state to detect changes efficiently
-- **Error Handling**: Comprehensive error handling and logging
+- **Real-time monitoring**: Continuously polls the OpenHands API for updates
+- **Telegram notifications**: Sends instant alerts to configured Telegram chat
+- **State tracking**: Remembers previous conversation states to detect changes
+- **Error handling**: Robust error handling with comprehensive logging
+- **Configurable polling**: Adjustable polling interval for different needs
 
 ## Installation
 
-### Cloning the Repository
+### Prerequisites
+
+- Python 3.8 or higher
+- Telegram Bot Token (obtained from [@BotFather](https://t.me/botfather))
+- Telegram Chat ID
+- OpenHands API access
+
+### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
 cd openhands-monitor-bot
 ```
 
-### Installing Dependencies
+### Step 2: Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### Configuring the `.env` File
+### Step 3: Configure Environment Variables
 
-Copy the `.env.example` file to `.env` and update it with the necessary environment variables:
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
 
-```bash
-cp .env.example .env
-```
+2. Edit the `.env` file with your configuration:
+   ```bash
+   nano .env  # or use your preferred text editor
+   ```
 
-Edit the `.env` file to set the required environment variables:
-
-```bash
-TELEGRAM_TOKEN=your_telegram_bot_token_here
-CHAT_ID=your_telegram_chat_id_here
-OPENHANDS_API_URL=http://localhost:3000
-```
+3. Set the required environment variables (see Configuration section below).
 
 ## Usage
 
-The command to run the bot:
+### Basic Usage
+
+To start the OpenHands Monitor Bot, run:
 
 ```bash
 python bot.py
 ```
 
+### What Happens When You Run the Bot
+
+1. **Configuration validation**: The bot checks that all required environment variables are set
+2. **Startup notification**: Sends "🤖 OpenHands Monitor Bot is online and starting to poll." to your Telegram chat
+3. **Polling begins**: Starts monitoring the OpenHands API at the configured interval
+4. **Notifications**: Sends alerts for:
+   - New tasks: `🆕 New Task Started: {title} (ID: {conv_id})`
+   - Status changes: `🔄 Task Status Update: {title} is now {status}.`
+
+### Running in Background
+
+To run the bot in the background (Linux/macOS):
+
+```bash
+nohup python bot.py > bot.log 2>&1 &
+```
+
+### Stopping the Bot
+
+Press `Ctrl+C` in the terminal where the bot is running.
+
 ## Configuration
 
-A list of all required environment variables:
+The bot is configured through environment variables. Create a `.env` file in the project root with the following variables:
 
-- **TELEGRAM_TOKEN**: Telegram Bot API token for authentication. Obtain this token by creating a bot with [@BotFather](https://t.me/botfather) on Telegram.
-- **CHAT_ID**: Telegram chat ID where notifications will be sent. Can be a user ID, group ID, or channel ID.
-- **OPENHANDS_API_URL**: OpenHands API base URL. Defaults to `http://host.docker.internal:3000` if not set.
+### Required Environment Variables
 
-## Architecture
+| Variable | Type | Description | Example |
+|----------|------|-------------|---------|
+| **`TELEGRAM_TOKEN`** | string | Telegram Bot API token for authentication. Obtain from [@BotFather](https://t.me/botfather) | `TELEGRAM_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
+| **`CHAT_ID`** | string | Telegram chat ID where notifications will be sent. Can be user ID, group ID, or channel ID. Use @userinfobot to find your chat ID. | `CHAT_ID=987654321` |
+| **`OPENHANDS_API_URL`** | string | Base URL for the OpenHands API. Defaults to `http://host.docker.internal:3000` if not set. | `OPENHANDS_API_URL=http://localhost:3000` |
 
-### Core Components
+### Optional Environment Variables
 
-1. **Configuration Module**: Loads environment variables and sets up global constants
-2. **Telegram Integration**: Handles message sending with retry logic using the `python-telegram-bot` library
-3. **API Client**: Uses `httpx` for asynchronous HTTP requests to the OpenHands API
-4. **State Manager**: Tracks conversation states to detect changes
-5. **Polling Loop**: Main monitoring loop that periodically checks for updates
+| Variable | Type | Default | Description | Example |
+|----------|------|---------|-------------|---------|
+| **`POLL_INTERVAL`** | integer | `5` | Interval in seconds between polling cycles. Controls how frequently the bot checks for updates. | `POLL_INTERVAL=10` |
 
-### Data Flow
-1. Bot starts and validates configuration
-2. Sends startup notification to Telegram
-3. Enters infinite polling loop:
-   - Fetches conversations from OpenHands API
-   - Compares with previous state
-   - Sends notifications for detected changes
-   - Updates internal state
-   - Waits for next polling cycle
+### Example `.env` File
+
+```env
+# Required variables
+TELEGRAM_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
+CHAT_ID=987654321
+OPENHANDS_API_URL=http://localhost:3000
+
+# Optional variables
+POLL_INTERVAL=5
+```
 
 ## Development
 
 ### Project Structure
+
 ```
 openhands-monitor-bot/
 ├── bot.py              # Main bot implementation
 ├── requirements.txt    # Python dependencies
 ├── README.md          # This documentation
-├── tests/             # Test suite
-├── .env.example       # Environment variables template
-└── Dockerfile         # Containerization configuration
+├── .env.example       # Example environment configuration
+├── tests/             # Test files
+└── Dockerfile         # Docker configuration
 ```
 
-### Code Style
-- Follows PEP 8 guidelines
-- Uses type hints for all function signatures
-- Implements comprehensive error handling
-- Includes detailed logging
-
-### Adding Features
-1. Create a feature branch from `main`
-2. Implement changes with appropriate tests
-3. Update documentation as needed
-4. Submit a pull request for review
-
-## Testing
-
 ### Running Tests
+
 ```bash
 pytest tests/
 ```
 
-### Test Coverage
-The project includes comprehensive tests with mocked external dependencies:
-- Telegram API calls are mocked to prevent real notifications
-- OpenHands API responses are simulated
-- Error scenarios are tested
+### Code Style
 
-### Test Structure
-- `test_bot.py`: Unit tests for bot functionality
-- Mocked external dependencies using `unittest.mock`
-- Both positive and negative test cases
+This project follows:
+- **PEP 8** for Python code style
+- **Google Style** docstrings for documentation
+- **Type hints** for all function signatures
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"TELEGRAM_TOKEN and CHAT_ID environment variables must be set."**
+   - Solution: Ensure your `.env` file exists and contains both variables
+
+2. **Telegram messages not sending**
+   - Check that your Telegram token is valid
+   - Verify the chat ID is correct
+   - Ensure the bot has been added to the chat/channel
+
+3. **No conversations being detected**
+   - Verify the `OPENHANDS_API_URL` is correct
+   - Check that the OpenHands API is running and accessible
+   - Review logs for HTTP errors
+
+### Logs
+
+The bot logs to stdout with the following format:
+```
+2024-01-12 10:30:00,000 - bot - INFO - Starting polling loop...
+```
+
+Check logs for error messages and debugging information.
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 

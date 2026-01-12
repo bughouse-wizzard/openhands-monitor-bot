@@ -8,14 +8,13 @@ Key components:
 - Configuration via environment variables
 - Asynchronous polling of OpenHands API
 - State tracking for conversation changes
-- Telegram notification system with retry logic
+- Telegram notification system with error handling
 """
 
 import os
 import asyncio
 import logging
 import httpx
-from tenacity import retry, stop_after_attempt, wait_fixed
 from telegram import Bot
 from telegram.error import TelegramError
 
@@ -47,21 +46,30 @@ bot = Bot(token=TELEGRAM_TOKEN)
 This global instance is used by send_telegram_message function to send
 notifications to the configured chat."""
 
-@retry(stop=stop_after_attempt(3), wait=wait_fixed(2))
-async def send_telegram_message(message: str) -> None:
+async def send_telegram_message(message: str) -> bool:
     """
     Sends a message to the configured Telegram chat.
 
     This function sends a message to the Telegram chat specified by the
-    CHAT_ID environment variable using the Telegram Bot API.
+    CHAT_ID environment variable using the Telegram Bot API. It uses the
+    global `bot` instance initialized with TELEGRAM_TOKEN.
 
     Args:
         message (str): The message content to send to the Telegram chat.
 
     Returns:
-        None: This function does not return a value.
+        bool: True if the message was sent successfully, False otherwise.
+        
+    Note:
+        The function logs errors but does not raise exceptions, returning
+        False instead when message sending fails.
     """
-    await bot.send_message(chat_id=CHAT_ID, text=message)
+    try:
+        await bot.send_message(chat_id=CHAT_ID, text=message)
+        return True
+    except TelegramError as e:
+        logger.error(f"Failed to send Telegram message: {e}")
+        return False
 
 async def fetch_conversations() -> list[dict]:
     """
@@ -82,6 +90,10 @@ async def fetch_conversations() -> list[dict]:
         httpx.HTTPStatusError: If the API returns an HTTP error status (4xx, 5xx).
         httpx.RequestError: If there is a network or connection error.
         ValueError: If the response cannot be parsed as valid JSON.
+        
+    Note:
+        The function catches and logs exceptions, returning an empty list
+        instead of propagating errors to allow the polling loop to continue.
     """
     async with httpx.AsyncClient() as client:
         try:
@@ -102,11 +114,17 @@ async def poll_and_notify() -> None:
 
     This function runs indefinitely, periodically fetching conversations from
     the OpenHands API using `fetch_conversations()` and comparing them with
-    the previous state. When changes are detected (new conversations or status
-    changes), it sends notifications using `send_telegram_message()`.
+    the previous state stored in the global `conversation_states` dictionary.
+    When changes are detected (new conversations or status changes), it sends
+    notifications using `send_telegram_message()`.
 
     Returns:
         None: This function runs indefinitely and does not return.
+        
+    Note:
+        Uses global `conversation_states` dictionary to track conversation
+        states between polling cycles. The polling interval is controlled by
+        the POLL_INTERVAL configuration.
     """
     global conversation_states
     logger.info("Starting polling loop...")
@@ -150,6 +168,14 @@ async def main() -> None:
 
     Returns:
         None: This function runs indefinitely and does not return.
+        
+    Raises:
+        ValueError: If required environment variables (TELEGRAM_TOKEN, CHAT_ID)
+            are not set.
+            
+    Note:
+        This is the main entry point for the bot. It handles KeyboardInterrupt
+        (Ctrl+C) for graceful shutdown and logs configuration errors.
     """
     if not all([TELEGRAM_TOKEN, CHAT_ID]):
         raise ValueError("TELEGRAM_TOKEN and CHAT_ID environment variables must be set.")

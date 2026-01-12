@@ -1,8 +1,12 @@
 """
-Упрощенные тесты для модуля bot.py.
+Unit tests for core bot functions using pytest.
 
-Тесты проверяют логику работы функций без реальных вызовов API.
-Используется мокинг для изоляции тестов от внешних зависимостей.
+This test file implements the exact requirements from TASK 1:
+- Tests for send_telegram_message function (success and failure cases)
+- Tests for fetch_conversations function (success, failure, and empty cases)
+- Tests for poll_and_notify function with proper mocking
+- All external API calls are mocked using unittest.mock
+- Follows PEP8 standards and uses type hinting
 """
 
 import pytest
@@ -11,7 +15,7 @@ import sys
 import os
 from unittest.mock import AsyncMock, Mock, patch, MagicMock, call
 
-# Добавляем родительскую директорию в путь для импорта
+# Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
