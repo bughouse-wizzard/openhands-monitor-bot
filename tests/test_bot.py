@@ -1869,3 +1869,112 @@ async def test_poll_and_notify_new_conversations():
                         mock_sleep.assert_called()
 
 
+# Additional test cases matching task requirements examples
+@pytest.mark.asyncio
+async def test_example_fetch_conversations_success():
+    """
+    Example test case matching task requirement for fetch_conversations success.
+    Demonstrates mocking external API call with httpx.AsyncClient.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Mock httpx.AsyncClient as shown in task example (but using httpx instead of requests)
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = [
+                {"id": "123", "title": "Test Conversation", "status": "running"},
+                {"id": "456", "title": "Another Conversation", "status": "completed"}
+            ]
+            
+            # Create mock client with proper async context manager
+            mock_client = AsyncMock()
+            mock_client.get = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            
+            with patch('httpx.AsyncClient', return_value=mock_client):
+                # Call the function
+                result = await bot.fetch_conversations()
+                
+                # Assertions matching task example pattern
+                assert isinstance(result, list)
+                assert len(result) == 2
+                assert result[0]["id"] == "123"
+                assert result[0]["title"] == "Test Conversation"
+                assert result[0]["status"] == "running"
+                assert result[1]["id"] == "456"
+                assert result[1]["title"] == "Another Conversation"
+                assert result[1]["status"] == "completed"
+
+
+@pytest.mark.asyncio
+async def test_example_send_telegram_message_success():
+    """
+    Example test case matching task requirement for send_telegram_message success.
+    Demonstrates mocking external Telegram API call.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Call the function
+            await bot.send_telegram_message("Test message")
+            
+            # Verify the bot was called with correct parameters
+            mock_bot_instance.send_message.assert_called_once_with(
+                chat_id='test',
+                text='Test message'
+            )
+
+
+@pytest.mark.asyncio
+async def test_example_poll_and_notify_with_mocks():
+    """
+    Example test case matching task requirement for poll_and_notify.
+    Demonstrates mocking multiple external dependencies.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Reset conversation states for clean test
+            bot.conversation_states = {}
+            
+            # Mock fetch_conversations to return test data
+            with patch('bot.fetch_conversations') as mock_fetch:
+                with patch('bot.send_telegram_message') as mock_send:
+                    # Setup mock return value
+                    mock_fetch.return_value = [
+                        {"id": "789", "title": "New Task", "status": "running"}
+                    ]
+                    
+                    # Call the function
+                    await bot.poll_and_notify()
+                    
+                    # Verify fetch_conversations was called
+                    mock_fetch.assert_called_once()
+                    
+                    # Verify send_telegram_message was called for new conversation
+                    mock_send.assert_called_once_with("🆕 New Task Started: New Task (ID: 789)")
+                    
+                    # Verify conversation_states was updated
+                    assert bot.conversation_states == {"789": "running"}
+
+
