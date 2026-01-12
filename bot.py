@@ -56,13 +56,18 @@ async def send_telegram_message(message: str) -> bool:
 
     Args:
         message (str): The message content to send to the Telegram chat.
+            Should be a plain text string.
 
     Returns:
         bool: True if the message was sent successfully, False otherwise.
         
     Note:
         The function logs errors but does not raise exceptions, returning
-        False instead when message sending fails.
+        False instead when message sending fails. This allows the polling
+        loop to continue even if a single notification fails.
+        
+    Raises:
+        None: All exceptions are caught and logged internally.
     """
     try:
         await bot.send_message(chat_id=CHAT_ID, text=message)
@@ -118,13 +123,24 @@ async def poll_and_notify() -> None:
     When changes are detected (new conversations or status changes), it sends
     notifications using `send_telegram_message()`.
 
+    The function performs the following steps in each polling cycle:
+    1. Sleeps for POLL_INTERVAL seconds
+    2. Fetches current conversations from OpenHands API
+    3. Compares with previous state to detect changes
+    4. Sends notifications for new conversations and status changes
+    5. Cleans up old conversations that are no longer present
+
     Returns:
         None: This function runs indefinitely and does not return.
         
     Note:
         Uses global `conversation_states` dictionary to track conversation
         states between polling cycles. The polling interval is controlled by
-        the POLL_INTERVAL configuration.
+        the POLL_INTERVAL configuration or environment variable.
+        
+    Raises:
+        None: All exceptions are caught and logged internally to ensure
+        the polling loop continues running.
     """
     global conversation_states
     logger.info("Starting polling loop...")
@@ -166,6 +182,11 @@ async def main() -> None:
     sends a startup notification to Telegram, and then enters the main
     polling loop by calling `poll_and_notify()`.
 
+    The function performs the following steps:
+    1. Validates that TELEGRAM_TOKEN and CHAT_ID environment variables are set
+    2. Sends a startup notification to Telegram
+    3. Enters the main polling loop via poll_and_notify()
+
     Returns:
         None: This function runs indefinitely and does not return.
         
@@ -175,7 +196,8 @@ async def main() -> None:
             
     Note:
         This is the main entry point for the bot. It handles KeyboardInterrupt
-        (Ctrl+C) for graceful shutdown and logs configuration errors.
+        (Ctrl+C) for graceful shutdown and logs configuration errors. The
+        function will exit with an error if required configuration is missing.
     """
     if not all([TELEGRAM_TOKEN, CHAT_ID]):
         raise ValueError("TELEGRAM_TOKEN and CHAT_ID environment variables must be set.")
