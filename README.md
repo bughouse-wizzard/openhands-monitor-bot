@@ -52,7 +52,10 @@ pip install -r requirements.txt
    nano .env  # or use your preferred text editor
    ```
 
-3. Set the required environment variables (see Configuration section below).
+3. Set the required environment variables (see Configuration section below for detailed descriptions):
+   - `TELEGRAM_TOKEN`: Your Telegram Bot API token
+   - `CHAT_ID`: Your Telegram chat ID
+   - `OPENHANDS_API_URL`: OpenHands API URL (optional, has default)
 
 ## Usage
 
@@ -91,6 +94,8 @@ The bot is configured through environment variables. Create a `.env` file in the
 
 ### Required Environment Variables
 
+The following environment variables **must** be set for the bot to function:
+
 | Variable | Type | Description | Example |
 |----------|------|-------------|---------|
 | **`TELEGRAM_TOKEN`** | string | Telegram Bot API token for authentication. Obtain from [@BotFather](https://t.me/botfather) | `TELEGRAM_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
@@ -98,6 +103,8 @@ The bot is configured through environment variables. Create a `.env` file in the
 | **`OPENHANDS_API_URL`** | string | Base URL for the OpenHands API. Defaults to `http://host.docker.internal:3000` if not set. | `OPENHANDS_API_URL=http://localhost:3000` |
 
 ### Optional Environment Variables
+
+The following environment variables are optional and have default values:
 
 | Variable | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
