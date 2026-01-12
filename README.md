@@ -74,9 +74,10 @@ pip install -r requirements.txt
    ```
 
 3. **Set the required environment variables** (see Configuration section below for details):
-   - `TELEGRAM_TOKEN` - Your Telegram bot token
-   - `CHAT_ID` - Your Telegram chat ID
+   - `TELEGRAM_TOKEN` - Your Telegram bot token (required)
+   - `CHAT_ID` - Your Telegram chat ID (required)
    - `OPENHANDS_API_URL` - URL of your OpenHands API (optional, defaults to `http://host.docker.internal:3000`)
+   - `POLL_INTERVAL` - Polling interval in seconds (optional, defaults to 5)
 
 ## Usage
 
@@ -125,15 +126,11 @@ The bot is configured through environment variables. Create a `.env` file in the
 | Variable | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
 | **`OPENHANDS_API_URL`** | string | `http://host.docker.internal:3000` | Base URL for the OpenHands API. If not set, defaults to `http://host.docker.internal:3000`. | `OPENHANDS_API_URL=http://localhost:3000` |
+| **`POLL_INTERVAL`** | int | `5` | Polling interval in seconds between checks for conversation updates. | `POLL_INTERVAL=10` |
 
 ### Polling Configuration
 
-The polling interval is configured directly in the source code (`bot.py`) and is not controlled by environment variables. To change the polling interval, modify the `POLL_INTERVAL` constant in `bot.py`:
-
-```python
-# In bot.py, line 35
-POLL_INTERVAL = 5  # seconds - change this value as needed
-```
+The polling interval can be configured either by setting the `POLL_INTERVAL` environment variable or by modifying the `POLL_INTERVAL` constant in `bot.py`. The environment variable takes precedence if set.
 
 ### Example `.env` File
 
@@ -144,6 +141,7 @@ CHAT_ID=987654321
 
 # Optional variables
 OPENHANDS_API_URL=http://localhost:3000
+POLL_INTERVAL=5
 ```
 
 ## Development
