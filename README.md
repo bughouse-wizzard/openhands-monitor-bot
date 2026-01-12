@@ -10,13 +10,14 @@ The OpenHands Monitor Bot is a Telegram bot designed to monitor OpenHands platfo
 
 This bot helps teams stay informed about their OpenHands tasks without needing to constantly check the platform manually.
 
-## Features
+## Key Features
 
 - **Real-time monitoring**: Continuously polls the OpenHands API for updates
 - **Telegram notifications**: Sends instant alerts to configured Telegram chat
 - **State tracking**: Remembers previous conversation states to detect changes
 - **Error handling**: Robust error handling with comprehensive logging
 - **Configurable polling**: Adjustable polling interval for different needs
+- **Asynchronous architecture**: Built with async/await for efficient I/O operations
 
 ## Installation
 
