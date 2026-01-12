@@ -136,7 +136,7 @@ async def poll_and_notify() -> None:
     Note:
         Uses global `conversation_states` dictionary to track conversation
         states between polling cycles. The polling interval is controlled by
-        the POLL_INTERVAL configuration or environment variable.
+        the POLL_INTERVAL constant defined in the source code.
         
     Raises:
         None: All exceptions are caught and logged internally to ensure

@@ -22,12 +22,15 @@ This bot helps teams stay informed about their OpenHands tasks without needing t
 
 ### Prerequisites
 
-- Python 3.8 or higher
-- Telegram Bot Token (obtained from [@BotFather](https://t.me/botfather))
-- Telegram Chat ID
-- OpenHands API access
+- **Python 3.8 or higher** - The bot is built with Python and requires modern Python features
+- **Telegram Bot Token** - Obtain from [@BotFather](https://t.me/botfather) by creating a new bot
+- **Telegram Chat ID** - Your personal chat ID or group/channel ID where notifications will be sent
+- **OpenHands API access** - Access to an OpenHands instance with API endpoints available
+- **Git** - For cloning the repository (optional if downloading manually)
 
 ### Step 1: Clone the Repository
+
+Clone the repository to your local machine:
 
 ```bash
 git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
@@ -36,23 +39,44 @@ cd openhands-monitor-bot
 
 ### Step 2: Install Dependencies
 
+Install all required Python packages:
+
 ```bash
+pip install -r requirements.txt
+```
+
+**Alternative: Using virtual environment (recommended)**
+
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Linux/macOS:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
 ### Step 3: Configure Environment Variables
 
-1. Copy the example environment file:
+1. **Copy the example environment file**:
    ```bash
    cp .env.example .env
    ```
 
-2. Edit the `.env` file with your configuration:
+2. **Edit the `.env` file** with your configuration:
    ```bash
    nano .env  # or use your preferred text editor
    ```
 
-3. Set the required environment variables (see Configuration section below).
+3. **Set the required environment variables** (see Configuration section below for details):
+   - `TELEGRAM_TOKEN` - Your Telegram bot token
+   - `CHAT_ID` - Your Telegram chat ID
+   - `OPENHANDS_API_URL` - URL of your OpenHands API (optional, defaults to `http://host.docker.internal:3000`)
 
 ## Usage
 
@@ -95,13 +119,21 @@ The bot is configured through environment variables. Create a `.env` file in the
 |----------|------|-------------|---------|
 | **`TELEGRAM_TOKEN`** | string | Telegram Bot API token for authentication. Obtain from [@BotFather](https://t.me/botfather) | `TELEGRAM_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz` |
 | **`CHAT_ID`** | string | Telegram chat ID where notifications will be sent. Can be user ID, group ID, or channel ID. Use @userinfobot to find your chat ID. | `CHAT_ID=987654321` |
-| **`OPENHANDS_API_URL`** | string | Base URL for the OpenHands API. Defaults to `http://host.docker.internal:3000` if not set. | `OPENHANDS_API_URL=http://localhost:3000` |
 
 ### Optional Environment Variables
 
 | Variable | Type | Default | Description | Example |
 |----------|------|---------|-------------|---------|
-| **`POLL_INTERVAL`** | integer | `5` | Interval in seconds between polling cycles. Controls how frequently the bot checks for updates. | `POLL_INTERVAL=10` |
+| **`OPENHANDS_API_URL`** | string | `http://host.docker.internal:3000` | Base URL for the OpenHands API. If not set, defaults to `http://host.docker.internal:3000`. | `OPENHANDS_API_URL=http://localhost:3000` |
+
+### Polling Configuration
+
+The polling interval is configured directly in the source code (`bot.py`) and is not controlled by environment variables. To change the polling interval, modify the `POLL_INTERVAL` constant in `bot.py`:
+
+```python
+# In bot.py, line 35
+POLL_INTERVAL = 5  # seconds - change this value as needed
+```
 
 ### Example `.env` File
 
@@ -109,10 +141,9 @@ The bot is configured through environment variables. Create a `.env` file in the
 # Required variables
 TELEGRAM_TOKEN=1234567890:ABCdefGHIjklMNOpqrsTUVwxyz
 CHAT_ID=987654321
-OPENHANDS_API_URL=http://localhost:3000
 
 # Optional variables
-POLL_INTERVAL=5
+OPENHANDS_API_URL=http://localhost:3000
 ```
 
 ## Development
