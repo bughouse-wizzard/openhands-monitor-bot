@@ -2731,6 +2731,58 @@ async def test_poll_and_notify_empty_conversations():
 
 
 @pytest.mark.asyncio
+async def test_poll_and_notify_send_message_failure():
+    """
+    Test poll_and_notify when send_telegram_message fails.
+    
+    This test verifies that:
+    1. State is still updated even when sending notification fails
+    2. The polling loop continues despite notification failures
+    3. Conversation state tracking works correctly
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Clear conversation states
+            bot.conversation_states.clear()
+            
+            # Mock fetch_conversations to return a new conversation
+            mock_conversations = [
+                {"id": "1", "title": "Task 1", "status": "running"}
+            ]
+            
+            # Mock send_telegram_message to return False (failure)
+            mock_send = AsyncMock(return_value=False)
+            
+            # Mock asyncio.sleep to break the loop after first iteration
+            sleep_calls = []
+            async def mock_sleep(delay):
+                sleep_calls.append(delay)
+                if len(sleep_calls) > 1:  # Stop after 1 iteration
+                    raise asyncio.CancelledError()
+            
+            with patch.object(bot, 'fetch_conversations', AsyncMock(return_value=mock_conversations)):
+                with patch.object(bot, 'send_telegram_message', mock_send):
+                    with patch('asyncio.sleep', mock_sleep):
+                        # Run poll_and_notify - it should raise CancelledError
+                        try:
+                            await bot.poll_and_notify()
+                        except asyncio.CancelledError:
+                            pass
+                        
+                        # Verify send_telegram_message was called
+                        mock_send.assert_called_once_with("🆕 New Task Started: Task 1 (ID: 1)")
+                        
+                        # Verify state was updated despite notification failure
+                        assert bot.conversation_states == {"1": "running"}
+
+
+@pytest.mark.asyncio
 async def test_main_function():
     """
     Test main function initialization and validation.
