@@ -250,13 +250,16 @@ async def test_send_telegram_message_success():
             
             # Call the function
             test_message = "Test message"
-            await bot.send_telegram_message(test_message)
+            result = await bot.send_telegram_message(test_message)
             
             # Verify send_message was called with correct parameters
             mock_bot_instance.send_message.assert_called_once_with(
                 chat_id='test', 
                 text=test_message
             )
+            
+            # Verify function returns True on success
+            assert result is True
 
 
 @pytest.mark.asyncio
@@ -287,6 +290,37 @@ async def test_send_telegram_message_failure():
             )
             
             # Verify function returns False on error
+            assert result is False
+
+
+@pytest.mark.asyncio
+async def test_send_telegram_message_timeout():
+    """Test Telegram message sending failure with timeout error."""
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            # Configure mock to raise timeout exception
+            from telegram.error import TimedOut
+            mock_bot_instance.send_message.side_effect = TimedOut("Timeout error")
+            
+            import bot
+            
+            # Call function - it should return False on error (not raise exception)
+            result = await bot.send_telegram_message("Test message")
+            
+            # Verify send_message was called once
+            mock_bot_instance.send_message.assert_called_once_with(
+                chat_id='test',
+                text='Test message'
+            )
+            
+            # Verify function returns False on timeout error
             assert result is False
 
 

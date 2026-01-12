@@ -32,8 +32,9 @@ CHAT_ID = os.environ.get("CHAT_ID")
 OPENHANDS_API_URL = os.environ.get("OPENHANDS_API_URL", "http://host.docker.internal:3000")
 """str: Base URL for OpenHands API, defaults to 'http://host.docker.internal:3000'."""
 
-POLL_INTERVAL = 5  # seconds
-"""int: Interval in seconds between polling cycles for checking conversation updates."""
+POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", 5))  # seconds
+"""int: Interval in seconds between polling cycles for checking conversation updates.
+Loaded from POLL_INTERVAL environment variable, defaults to 5 if not set."""
 
 # --- State ---
 conversation_states = {}
@@ -50,24 +51,11 @@ async def send_telegram_message(message: str) -> bool:
     """
     Sends a message to the configured Telegram chat.
 
-    This function sends a message to the Telegram chat specified by the
-    CHAT_ID environment variable using the Telegram Bot API. It uses the
-    global `bot` instance initialized with TELEGRAM_TOKEN.
-
     Args:
         message (str): The message content to send to the Telegram chat.
-            Should be a plain text string.
 
     Returns:
         bool: True if the message was sent successfully, False otherwise.
-        
-    Note:
-        The function logs errors but does not raise exceptions, returning
-        False instead when message sending fails. This allows the polling
-        loop to continue even if a single notification fails.
-        
-    Raises:
-        None: All exceptions are caught and logged internally.
     """
     try:
         await bot.send_message(chat_id=CHAT_ID, text=message)
@@ -80,25 +68,8 @@ async def fetch_conversations() -> list[dict]:
     """
     Fetches conversations from the OpenHands API.
 
-    Makes an asynchronous HTTP GET request to the OpenHands API endpoint
-    to retrieve the current list of conversations/tasks.
-
     Returns:
-        list[dict]: A list of conversation objects if successful,
-            or an empty list [] if an error occurs. Each conversation object
-            is a dictionary containing the following fields:
-            - id (str): Unique identifier for the conversation
-            - title (str): Title or description of the conversation/task
-            - status (str): Current status of the conversation (e.g., 'running', 'completed')
-
-    Raises:
-        httpx.HTTPStatusError: If the API returns an HTTP error status (4xx, 5xx).
-        httpx.RequestError: If there is a network or connection error.
-        ValueError: If the response cannot be parsed as valid JSON.
-        
-    Note:
-        The function catches and logs exceptions, returning an empty list
-        instead of propagating errors to allow the polling loop to continue.
+        list[dict]: A list of conversation objects.
     """
     async with httpx.AsyncClient() as client:
         try:
@@ -116,31 +87,9 @@ async def fetch_conversations() -> list[dict]:
 async def poll_and_notify() -> None:
     """
     The main polling loop to monitor conversation state changes.
-
-    This function runs indefinitely, periodically fetching conversations from
-    the OpenHands API using `fetch_conversations()` and comparing them with
-    the previous state stored in the global `conversation_states` dictionary.
-    When changes are detected (new conversations or status changes), it sends
-    notifications using `send_telegram_message()`.
-
-    The function performs the following steps in each polling cycle:
-    1. Sleeps for POLL_INTERVAL seconds
-    2. Fetches current conversations from OpenHands API
-    3. Compares with previous state to detect changes
-    4. Sends notifications for new conversations and status changes
-    5. Cleans up old conversations that are no longer present
-
-    Returns:
-        None: This function runs indefinitely and does not return.
-        
-    Note:
-        Uses global `conversation_states` dictionary to track conversation
-        states between polling cycles. The polling interval is controlled by
-        the POLL_INTERVAL constant defined in the source code.
-        
-    Raises:
-        None: All exceptions are caught and logged internally to ensure
-        the polling loop continues running.
+    
+    Periodically fetches conversations from OpenHands API and sends
+    notifications about new conversations and status changes.
     """
     global conversation_states
     logger.info("Starting polling loop...")
