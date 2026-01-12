@@ -59,7 +59,7 @@ async def send_telegram_message(message: str) -> bool:
         message (str): The message content to send to the Telegram chat.
 
     Returns:
-        bool: True if the message was sent successfully.
+        bool: True if the message was sent successfully, False otherwise.
 
     Raises:
         telegram.error.TelegramError: If all retry attempts fail to send the message.
