@@ -1,5 +1,15 @@
 # OpenHands Monitor Bot
 
+## Table of Contents
+- [Project Description](#project-description)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+- [Contributing](#contributing)
+
 ## Project Description
 
 The OpenHands Monitor Bot is a Telegram bot designed to monitor OpenHands platform tasks and send real-time notifications about task status changes. It continuously polls the OpenHands API for conversation/task updates and alerts users about:
@@ -39,11 +49,16 @@ cd openhands-monitor-bot
 
 ### Step 2: Install Dependencies
 
-Install all required Python packages:
+Install all required Python packages using pip:
 
 ```bash
 pip install -r requirements.txt
 ```
+
+This command installs all dependencies listed in the `requirements.txt` file, including:
+- `python-telegram-bot` for Telegram API integration
+- `httpx` for making HTTP requests to the OpenHands API
+- `asyncio` for asynchronous operations (included in Python standard library)
 
 **Alternative: Using virtual environment (recommended)**
 
@@ -83,11 +98,16 @@ pip install -r requirements.txt
 
 ### Basic Usage
 
-To start the OpenHands Monitor Bot, run:
+To start the OpenHands Monitor Bot, run the following command:
 
 ```bash
 python bot.py
 ```
+
+This command executes the main bot script which will:
+1. Validate your configuration
+2. Send a startup notification to Telegram
+3. Begin polling the OpenHands API for updates
 
 ### What Happens When You Run the Bot
 

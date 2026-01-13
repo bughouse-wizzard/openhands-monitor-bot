@@ -110,9 +110,13 @@ async def poll_and_notify() -> None:
     The main polling loop to monitor conversation state changes.
     
     Periodically fetches conversations from OpenHands API and sends
-    notifications about new conversations and status changes. The function
-    maintains an internal state of known conversations to detect changes
-    between polling cycles.
+    Telegram notifications about new conversations and status changes. 
+    The function maintains an internal state of known conversations to 
+    detect changes between polling cycles.
+
+    Side Effects:
+    - Sends Telegram messages via `send_telegram_message()` function
+    - Updates global `conversation_states` dictionary
 
     The loop runs indefinitely with a configurable interval (POLL_INTERVAL).
     For each polling cycle:
