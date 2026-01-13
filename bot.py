@@ -51,11 +51,27 @@ async def send_telegram_message(message: str) -> bool:
     """
     Sends a message to the configured Telegram chat.
 
+    This function uses the global Telegram bot instance to send a message to the
+    chat ID specified in the CHAT_ID environment variable. It handles Telegram
+    API errors gracefully and logs any failures.
+
     Args:
-        message (str): The message to send.
+        message (str): The message content to send to the Telegram chat.
+            Can include emojis and formatting supported by Telegram.
 
     Returns:
-        bool: True if the message was sent successfully, False otherwise.
+        bool: True if the message was sent successfully, False if an error occurred.
+
+    Raises:
+        TelegramError: Propagated from the Telegram API if message sending fails.
+            Note: This is caught internally and logged, but the function returns
+            False instead of raising the exception.
+
+    Examples:
+        >>> await send_telegram_message("🤖 Bot is online!")
+        True
+        >>> await send_telegram_message("Task completed successfully!")
+        True
     """
     try:
         await bot.send_message(chat_id=CHAT_ID, text=message)
@@ -68,8 +84,33 @@ async def fetch_conversations() -> list[dict]:
     """
     Fetches conversations from the OpenHands API.
 
+    This function makes an asynchronous HTTP GET request to the OpenHands API
+    endpoint configured in OPENHANDS_API_URL environment variable. It retrieves
+    the list of conversations/tasks and handles various error conditions including
+    HTTP errors, network issues, and JSON parsing errors.
+
     Returns:
-        list[dict]: A list of conversation objects.
+        list[dict]: A list of conversation objects. Each dictionary contains:
+            - id (str): Unique identifier for the conversation
+            - title (str, optional): Title/name of the conversation/task
+            - status (str, optional): Current status of the conversation
+            - Other conversation metadata as provided by the OpenHands API
+        Returns an empty list if the request fails or no conversations are available.
+
+    Raises:
+        httpx.HTTPStatusError: If the HTTP response status code indicates an error
+            (4xx or 5xx). This is caught internally and logged.
+        httpx.RequestError: If there's a network-related error. This is caught
+            internally and logged.
+        ValueError: If the response body cannot be parsed as JSON. This is caught
+            internally and logged.
+
+    Examples:
+        >>> conversations = await fetch_conversations()
+        >>> len(conversations)
+        3
+        >>> conversations[0].keys()
+        dict_keys(['id', 'title', 'status'])
     """
     async with httpx.AsyncClient() as client:
         try:
@@ -87,8 +128,34 @@ async def fetch_conversations() -> list[dict]:
 async def poll_and_notify() -> None:
     """
     The main polling loop to monitor conversation state changes.
-    
-    Periodically fetches conversations and sends notifications about changes.
+
+    This function runs indefinitely, periodically fetching conversations from
+    the OpenHands API and comparing them with previously known states. It sends
+    Telegram notifications when:
+    1. A new conversation/task is detected
+    2. An existing conversation's status changes
+
+    The function maintains an in-memory state dictionary (conversation_states)
+    to track conversation statuses between polling cycles. It also cleans up
+    old conversations that are no longer present in the API response.
+
+    The polling interval is controlled by the POLL_INTERVAL environment variable
+    (default: 5 seconds).
+
+    Note:
+        This function runs in an infinite loop and should be executed as an
+        asynchronous task. It will continue running until the program is
+        interrupted (e.g., with Ctrl+C).
+
+    Raises:
+        Exception: Any unhandled exceptions from send_telegram_message or
+            fetch_conversations will propagate up and may terminate the loop.
+
+    Examples:
+        >>> # This function is typically called from main()
+        >>> await poll_and_notify()
+        INFO: Starting polling loop...
+        INFO: Sending notification for new task...
     """
     global conversation_states
     logger.info("Starting polling loop...")
@@ -125,8 +192,37 @@ async def poll_and_notify() -> None:
 async def main() -> None:
     """
     Initializes and runs the OpenHands Monitor Bot.
-    
-    Validates configuration and starts the polling loop.
+
+    This is the main entry point for the OpenHands Monitor Bot application.
+    It performs the following steps:
+    1. Validates that all required environment variables are set
+    2. Sends a startup notification to Telegram
+    3. Starts the main polling loop (poll_and_notify)
+
+    The function runs indefinitely until interrupted by the user (Ctrl+C)
+    or until a fatal error occurs.
+
+    Environment Variables:
+        TELEGRAM_TOKEN (str): Required. Telegram Bot API token.
+        CHAT_ID (str): Required. Telegram chat ID for notifications.
+        OPENHANDS_API_URL (str): Optional. OpenHands API URL.
+            Default: "http://host.docker.internal:3000"
+        POLL_INTERVAL (int): Optional. Polling interval in seconds.
+            Default: 5
+
+    Raises:
+        ValueError: If required environment variables (TELEGRAM_TOKEN, CHAT_ID)
+            are not set. This error is caught in the __main__ block and logged.
+        KeyboardInterrupt: When the user presses Ctrl+C to stop the bot.
+            This is caught in the __main__ block and results in graceful shutdown.
+        SystemExit: When the program is terminated. Caught in __main__ block.
+
+    Examples:
+        >>> # Typically called via asyncio.run(main()) in __main__ block
+        >>> await main()
+        INFO: Sending startup notification...
+        INFO: Starting polling loop...
+        ... (bot runs until interrupted)
     """
     if not all([TELEGRAM_TOKEN, CHAT_ID]):
         raise ValueError("TELEGRAM_TOKEN and CHAT_ID environment variables must be set.")
