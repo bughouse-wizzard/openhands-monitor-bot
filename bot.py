@@ -51,11 +51,27 @@ async def send_telegram_message(message: str) -> bool:
     """
     Sends a message to the configured Telegram chat.
 
+    This function uses the global Telegram bot instance to send a message to the
+    chat ID specified in the CHAT_ID environment variable. It handles Telegram
+    API errors gracefully and logs any failures.
+
     Args:
-        message (str): The message to send.
+        message (str): The message content to send to the Telegram chat.
+            Can include emojis and formatting supported by Telegram.
 
     Returns:
-        bool: True if the message was sent successfully, False otherwise.
+        bool: True if the message was sent successfully, False if an error occurred.
+
+    Raises:
+        TelegramError: Propagated from the Telegram API if message sending fails.
+            Note: This is caught internally and logged, but the function returns
+            False instead of raising the exception.
+
+    Examples:
+        >>> await send_telegram_message("🤖 Bot is online!")
+        True
+        >>> await send_telegram_message("Task completed successfully!")
+        True
     """
     try:
         await bot.send_message(chat_id=CHAT_ID, text=message)
@@ -68,8 +84,33 @@ async def fetch_conversations() -> list[dict]:
     """
     Fetches conversations from the OpenHands API.
 
+    This function makes an asynchronous HTTP GET request to the OpenHands API
+    endpoint configured in OPENHANDS_API_URL environment variable. It retrieves
+    the list of conversations/tasks and handles various error conditions including
+    HTTP errors, network issues, and JSON parsing errors.
+
     Returns:
-        list[dict]: A list of conversation objects.
+        list[dict]: A list of conversation objects. Each dictionary contains:
+            - id (str): Unique identifier for the conversation
+            - title (str, optional): Title/name of the conversation/task
+            - status (str, optional): Current status of the conversation
+            - Other conversation metadata as provided by the OpenHands API
+        Returns an empty list if the request fails or no conversations are available.
+
+    Raises:
+        httpx.HTTPStatusError: If the HTTP response status code indicates an error
+            (4xx or 5xx). This is caught internally and logged.
+        httpx.RequestError: If there's a network-related error. This is caught
+            internally and logged.
+        ValueError: If the response body cannot be parsed as JSON. This is caught
+            internally and logged.
+
+    Examples:
+        >>> conversations = await fetch_conversations()
+        >>> len(conversations)
+        3
+        >>> conversations[0].keys()
+        dict_keys(['id', 'title', 'status'])
     """
     async with httpx.AsyncClient() as client:
         try:
