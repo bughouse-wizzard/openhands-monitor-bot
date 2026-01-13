@@ -9,6 +9,21 @@ Key components:
 - Asynchronous polling of OpenHands API
 - State tracking for conversation changes
 - Telegram notification system with error handling
+
+The bot continuously monitors OpenHands tasks and sends real-time notifications
+about new tasks, status changes, and task completions via Telegram.
+
+Environment Variables:
+    TELEGRAM_TOKEN (str): Telegram Bot API token for authentication
+    CHAT_ID (str): Telegram chat ID where notifications will be sent
+    OPENHANDS_API_URL (str): Base URL for OpenHands API (optional)
+    POLL_INTERVAL (int): Polling interval in seconds (optional)
+
+Functions:
+    send_telegram_message(message): Sends a message to configured Telegram chat
+    fetch_conversations(): Fetches conversations from OpenHands API
+    poll_and_notify(): Main polling loop for monitoring state changes
+    main(): Initializes and runs the OpenHands Monitor Bot
 """
 
 import os
