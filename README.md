@@ -67,6 +67,27 @@ pip install -r requirements.txt
    ```bash
    cp .env.example .env
    ```
+   If `.env.example` doesn't exist, create it manually with the following content:
+   ```bash
+   # OpenHands Monitor Bot - Environment Variables
+   # Copy this file to `.env` and fill in your actual values
+   
+   # Required: Telegram Bot Configuration
+   # Get TELEGRAM_TOKEN from @BotFather on Telegram
+   TELEGRAM_TOKEN=your_telegram_bot_token_here
+   
+   # Required: Telegram chat ID (user, group, or channel)
+   # Use @userinfobot on Telegram to find your chat ID
+   CHAT_ID=your_telegram_chat_id_here
+   
+   # Optional: OpenHands API Configuration
+   # Default: http://host.docker.internal:3000
+   OPENHANDS_API_URL=http://localhost:3000
+   
+   # Optional: Polling interval in seconds
+   # Default: 5 seconds
+   # POLL_INTERVAL=5
+   ```
 
 2. **Edit the `.env` file** with your configuration:
    ```bash
@@ -150,13 +171,30 @@ POLL_INTERVAL=5
 
 ```
 openhands-monitor-bot/
-├── bot.py              # Main bot implementation
+├── bot.py              # Main bot implementation with monitoring logic
+├── map_maker.py        # Dictionary module for word definitions
 ├── requirements.txt    # Python dependencies
 ├── README.md          # This documentation
 ├── .env.example       # Example environment configuration
 ├── tests/             # Test files
-└── Dockerfile         # Docker configuration
+│   ├── test_bot.py    # Tests for bot functionality
+│   └── test_map_maker.py  # Tests for dictionary module
+├── Dockerfile         # Docker configuration
+├── docker-compose.yml # Docker Compose configuration
+├── TECHNICAL_DOCUMENTATION.md  # Detailed technical documentation
+└── LICENSE            # MIT License
 ```
+
+### Code Documentation
+
+The project follows Google-style docstrings for all functions. Key functions in `bot.py` include:
+
+- `send_telegram_message()`: Sends notifications to Telegram with error handling
+- `fetch_conversations()`: Retrieves conversations from OpenHands API with HTTP error handling
+- `poll_and_notify()`: Main polling loop that monitors for conversation changes
+- `main()`: Entry point that validates configuration and starts the bot
+
+All functions include type hints and comprehensive documentation of parameters, return values, and exceptions.
 
 ### Running Tests
 

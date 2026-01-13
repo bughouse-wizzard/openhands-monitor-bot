@@ -2,13 +2,28 @@
 OpenHands Monitor Bot - Main monitoring module.
 
 This module provides functionality for monitoring OpenHands conversations/tasks
-and sending notifications to Telegram about status changes.
+and sending notifications to Telegram about status changes. The bot continuously
+polls the OpenHands API for conversation updates and sends real-time alerts
+when new tasks are created or existing task statuses change.
 
 Key components:
-- Configuration via environment variables
-- Asynchronous polling of OpenHands API
-- State tracking for conversation changes
-- Telegram notification system with error handling
+- Configuration via environment variables (TELEGRAM_TOKEN, CHAT_ID, OPENHANDS_API_URL, POLL_INTERVAL)
+- Asynchronous polling of OpenHands API using httpx
+- State tracking for conversation changes with in-memory storage
+- Telegram notification system with error handling using python-telegram-bot
+- Comprehensive logging for monitoring and debugging
+
+Main functions:
+- send_telegram_message(): Sends messages to configured Telegram chat
+- fetch_conversations(): Retrieves conversations from OpenHands API
+- poll_and_notify(): Main polling loop for monitoring and notifications
+- main(): Entry point that validates configuration and starts the bot
+
+Environment variables required:
+- TELEGRAM_TOKEN: Telegram Bot API token from @BotFather
+- CHAT_ID: Telegram chat ID where notifications will be sent
+- OPENHANDS_API_URL: URL of OpenHands API (default: http://host.docker.internal:3000)
+- POLL_INTERVAL: Polling interval in seconds (default: 5)
 """
 
 import os
