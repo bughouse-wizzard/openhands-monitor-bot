@@ -40,11 +40,29 @@ cd openhands-monitor-bot
 
 Alternatively, you can download the repository as a ZIP file from GitHub and extract it.
 
+**Note**: If you're setting up the bot for the first time, ensure you have Git installed on your system.
+
 ### Step 2: Install Dependencies
 
 Install all required Python packages using pip:
 
 ```bash
+pip install -r requirements.txt
+```
+
+**Recommended**: Create and activate a virtual environment first:
+
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate on Linux/Mac
+source venv/bin/activate
+
+# Activate on Windows
+venv\Scripts\activate
+
+# Then install dependencies
 pip install -r requirements.txt
 ```
 
@@ -75,11 +93,18 @@ The bot is configured through environment variables. Follow these steps:
    nano .env
    ```
 
+   **Windows users**: You can use Notepad or any text editor:
+   ```bash
+   notepad .env
+   ```
+
 3. **Set the required environment variables** (see Configuration section below for details):
    - `TELEGRAM_TOKEN` - Your Telegram bot token (required)
    - `CHAT_ID` - Your Telegram chat ID (required)
    - `OPENHANDS_API_URL` - URL of your OpenHands API (optional, defaults to `http://host.docker.internal:3000`)
    - `POLL_INTERVAL` - Polling interval in seconds (optional, defaults to 5)
+
+4. **Save the file** and ensure it's in the project root directory.
 
 ## Usage
 
@@ -91,6 +116,12 @@ To start the OpenHands Monitor Bot, run:
 python bot.py
 ```
 
+**Example output when starting the bot:**
+```
+2024-01-13 19:30:00 - __main__ - INFO - Starting polling loop...
+🤖 OpenHands Monitor Bot is online and starting to poll.
+```
+
 ### What Happens When You Run the Bot
 
 1. **Configuration validation**: The bot checks that all required environment variables are set
@@ -99,6 +130,15 @@ python bot.py
 4. **Notifications**: Sends alerts for:
    - New tasks: `🆕 New Task Started: {title} (ID: {conv_id})`
    - Status changes: `🔄 Task Status Update: {title} is now {status}.`
+
+**Example Telegram notifications:**
+```
+🤖 OpenHands Monitor Bot is online and starting to poll.
+🆕 New Task Started: Data Analysis Pipeline (ID: conv_abc123)
+🔄 Task Status Update: Data Analysis Pipeline is now completed.
+🆕 New Task Started: Model Training (ID: conv_def456)
+🔄 Task Status Update: Model Training is now running.
+```
 
 ### Running in Background
 

@@ -47,7 +47,7 @@ bot = Bot(token=TELEGRAM_TOKEN)
 This global instance is used by send_telegram_message function to send
 notifications to the configured chat."""
 
-async def send_telegram_message(message: str) -> bool:
+async def send_telegram_message(message: str) -> None:
     """
     Sends a message to the configured Telegram chat.
 
@@ -59,7 +59,7 @@ async def send_telegram_message(message: str) -> bool:
         message (str): The message content to send. Should be a plain text string.
 
     Returns:
-        bool: True if the message was sent successfully, False otherwise.
+        None: This function does not return a value.
 
     Raises:
         RuntimeError: If TELEGRAM_TOKEN or CHAT_ID environment variables are not set.
@@ -72,10 +72,8 @@ async def send_telegram_message(message: str) -> bool:
     """
     try:
         await bot.send_message(chat_id=CHAT_ID, text=message)
-        return True
     except TelegramError as e:
         logger.error(f"Failed to send Telegram message: {e}")
-        return False
 
 async def fetch_conversations() -> list[dict]:
     """
