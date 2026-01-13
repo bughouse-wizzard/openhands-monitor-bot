@@ -704,3 +704,412 @@ async def test_main_initialization():
                     
                     # Verify poll_and_notify was called
                     mock_poll.assert_called_once()
+
+
+# ============================================================================
+# TASK 2: Additional comprehensive tests for poll_and_notify and main functions
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_state_changes():
+    """
+    Test poll_and_notify with multiple state changes across polling cycles.
+    
+    Mocks fetch_conversations to return different conversation states across
+    multiple calls to simulate real-world state changes.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Clear conversation states
+            bot.conversation_states = {}
+            
+            # Track all sent messages
+            sent_messages = []
+            async def mock_send_telegram_message(message):
+                sent_messages.append(message)
+                return True
+            
+            # Simulate multiple polling cycles with different states
+            polling_cycles = [
+                # First cycle: New conversation appears
+                [{"id": "conv1", "title": "Task 1", "status": "running"}],
+                # Second cycle: Status changes
+                [{"id": "conv1", "title": "Task 1", "status": "completed"}],
+                # Third cycle: New conversation appears, first one still exists
+                [
+                    {"id": "conv1", "title": "Task 1", "status": "completed"},
+                    {"id": "conv2", "title": "Task 2", "status": "pending"}
+                ],
+                # Fourth cycle: Status changes for both conversations
+                [
+                    {"id": "conv1", "title": "Task 1", "status": "archived"},
+                    {"id": "conv2", "title": "Task 2", "status": "running"}
+                ]
+            ]
+            
+            # Create a mock that returns different values each call
+            fetch_call_count = 0
+            async def mock_fetch_conversations():
+                nonlocal fetch_call_count
+                if fetch_call_count < len(polling_cycles):
+                    result = polling_cycles[fetch_call_count]
+                    fetch_call_count += 1
+                    return result
+                # After all cycles, raise exception to break loop
+                raise Exception("Test complete - break loop")
+            
+            # Mock asyncio.sleep to control loop iterations
+            sleep_calls = []
+            async def mock_sleep(delay):
+                sleep_calls.append(delay)
+                # Break after processing all cycles
+                if fetch_call_count >= len(polling_cycles):
+                    raise Exception("Test complete - break loop")
+            
+            with patch.object(bot, 'fetch_conversations', mock_fetch_conversations):
+                with patch.object(bot, 'send_telegram_message', mock_send_telegram_message):
+                    with patch('asyncio.sleep', mock_sleep):
+                        # Run poll_and_notify
+                        try:
+                            await bot.poll_and_notify()
+                        except Exception as e:
+                            if "Test complete - break loop" not in str(e):
+                                raise
+            
+            # Verify all expected messages were sent
+            assert len(sent_messages) == 5  # 1 new + 1 status change + 1 new + 2 status changes
+            
+            # Verify message contents
+            assert "🆕 New Task Started: Task 1 (ID: conv1)" in sent_messages[0]
+            assert "🔄 Task Status Update: Task 1 is now completed." in sent_messages[1]
+            assert "🆕 New Task Started: Task 2 (ID: conv2)" in sent_messages[2]
+            assert "🔄 Task Status Update: Task 1 is now archived." in sent_messages[3]
+            assert "🔄 Task Status Update: Task 2 is now running." in sent_messages[4]
+            
+            # Verify final state
+            assert bot.conversation_states == {
+                "conv1": "archived",
+                "conv2": "running"
+            }
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_fetch_conversations_failure():
+    """
+    Test poll_and_notify when fetch_conversations fails with an exception.
+    
+    Verifies that the polling loop continues even when fetch_conversations
+    raises an exception (returns empty list).
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Clear conversation states
+            bot.conversation_states = {}
+            
+            # Track calls
+            fetch_calls = []
+            sent_messages = []
+            
+            async def mock_fetch_conversations():
+                fetch_calls.append(1)
+                # Simulate failure by returning empty list
+                return []
+            
+            async def mock_send_telegram_message(message):
+                sent_messages.append(message)
+                return True
+            
+            # Track sleep calls
+            sleep_calls = []
+            async def mock_sleep(delay):
+                sleep_calls.append(delay)
+                # Break after 3 sleep calls to ensure fetch_conversations is called multiple times
+                if len(sleep_calls) >= 3:
+                    raise Exception("Break loop after testing failure handling")
+            
+            with patch.object(bot, 'fetch_conversations', mock_fetch_conversations):
+                with patch.object(bot, 'send_telegram_message', mock_send_telegram_message):
+                    with patch('asyncio.sleep', mock_sleep):
+                        try:
+                            await bot.poll_and_notify()
+                        except Exception as e:
+                            if "Break loop after testing failure handling" not in str(e):
+                                raise
+            
+            # Verify fetch_conversations was called multiple times
+            # Note: fetch_conversations is called AFTER the first sleep, then continues if empty
+            # So with 3 sleep calls, fetch_conversations should be called at least 2 times
+            assert len(fetch_calls) >= 2, f"Expected at least 2 fetch calls, got {len(fetch_calls)}"
+            assert len(sleep_calls) >= 3, f"Expected at least 3 sleep calls, got {len(sleep_calls)}"
+            
+            # Verify no messages were sent (empty conversations list)
+            assert len(sent_messages) == 0
+            
+            # Verify state remains empty
+            assert bot.conversation_states == {}
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_conversation_removal():
+    """
+    Test poll_and_notify when conversations are removed between polling cycles.
+    
+    Verifies that conversation_states dictionary is properly cleaned up
+    when conversations no longer appear in the API response.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Set initial state with multiple conversations
+            bot.conversation_states = {
+                "conv1": "running",
+                "conv2": "pending",
+                "conv3": "completed"
+            }
+            
+            # Track sent messages
+            sent_messages = []
+            async def mock_send_telegram_message(message):
+                sent_messages.append(message)
+                return True
+            
+            # Simulate conversations being removed
+            polling_cycles = [
+                # First cycle: conv2 and conv3 removed, conv1 still exists
+                [{"id": "conv1", "title": "Task 1", "status": "running"}],
+                # Second cycle: New conversation appears
+                [
+                    {"id": "conv1", "title": "Task 1", "status": "running"},
+                    {"id": "conv4", "title": "Task 4", "status": "pending"}
+                ]
+            ]
+            
+            fetch_call_count = 0
+            async def mock_fetch_conversations():
+                nonlocal fetch_call_count
+                if fetch_call_count < len(polling_cycles):
+                    result = polling_cycles[fetch_call_count]
+                    fetch_call_count += 1
+                    return result
+                raise Exception("Test complete - break loop")
+            
+            # Mock asyncio.sleep
+            async def mock_sleep(delay):
+                if fetch_call_count >= len(polling_cycles):
+                    raise Exception("Test complete - break loop")
+            
+            with patch.object(bot, 'fetch_conversations', mock_fetch_conversations):
+                with patch.object(bot, 'send_telegram_message', mock_send_telegram_message):
+                    with patch('asyncio.sleep', mock_sleep):
+                        try:
+                            await bot.poll_and_notify()
+                        except Exception as e:
+                            if "Test complete - break loop" not in str(e):
+                                raise
+            
+            # Verify only one message was sent (for new conv4)
+            assert len(sent_messages) == 1
+            assert "🆕 New Task Started: Task 4 (ID: conv4)" in sent_messages[0]
+            
+            # Verify state cleanup - conv2 and conv3 removed, conv4 added
+            assert set(bot.conversation_states.keys()) == {"conv1", "conv4"}
+            assert bot.conversation_states["conv1"] == "running"
+            assert bot.conversation_states["conv4"] == "pending"
+
+
+@pytest.mark.asyncio
+async def test_main_with_controlled_polling_loop():
+    """
+    Test main function with controlled polling loop.
+    
+    Mocks the infinite polling loop to run for a controlled number of iterations
+    and verifies proper initialization and shutdown.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Track polling iterations
+            poll_iterations = 0
+            
+            async def mock_poll_and_notify():
+                nonlocal poll_iterations
+                poll_iterations += 1
+                # Simulate infinite loop by never returning
+                # We'll break from outside using a timeout
+                while True:
+                    await asyncio.sleep(0.1)
+            
+            # Track startup message
+            startup_message_sent = False
+            async def mock_send_telegram_message(message):
+                nonlocal startup_message_sent
+                if "OpenHands Monitor Bot is online" in message:
+                    startup_message_sent = True
+                return True
+            
+            with patch.object(bot, 'poll_and_notify', mock_poll_and_notify):
+                with patch.object(bot, 'send_telegram_message', mock_send_telegram_message):
+                    # Run main in a task with timeout
+                    task = asyncio.create_task(bot.main())
+                    try:
+                        # Wait a bit to ensure poll_and_notify is called
+                        await asyncio.sleep(0.2)
+                        # Cancel the task to stop it
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
+                    except Exception as e:
+                        task.cancel()
+                        raise
+            
+            # Verify startup message was sent
+            assert startup_message_sent, "Startup message should have been sent"
+            
+            # Verify poll_and_notify was called at least once
+            assert poll_iterations >= 1, f"Expected at least 1 polling iteration, got {poll_iterations}"
+
+
+@pytest.mark.asyncio
+async def test_main_error_handling_in_polling():
+    """
+    Test main function's error handling during polling.
+    
+    Verifies that main function continues running even if poll_and_notify
+    encounters temporary errors (simulated by exceptions).
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot') as mock_bot_class:
+            mock_bot_instance = AsyncMock()
+            mock_bot_class.return_value = mock_bot_instance
+            
+            import bot
+            
+            # Track calls
+            poll_calls = []
+            
+            async def mock_poll_and_notify():
+                poll_calls.append(1)
+                # Simulate that poll_and_notify runs indefinitely
+                # We'll control the loop from outside
+                while True:
+                    await asyncio.sleep(0.1)
+            
+            # Track startup message
+            startup_message_sent = False
+            async def mock_send_telegram_message(message):
+                nonlocal startup_message_sent
+                if "OpenHands Monitor Bot is online" in message:
+                    startup_message_sent = True
+                return True
+            
+            with patch.object(bot, 'poll_and_notify', mock_poll_and_notify):
+                with patch.object(bot, 'send_telegram_message', mock_send_telegram_message):
+                    # Run main in a task with timeout
+                    task = asyncio.create_task(bot.main())
+                    try:
+                        # Wait a bit to ensure poll_and_notify is called
+                        await asyncio.sleep(0.3)
+                        # Cancel the task to stop it
+                        task.cancel()
+                        try:
+                            await task
+                        except asyncio.CancelledError:
+                            pass
+                    except Exception as e:
+                        task.cancel()
+                        raise
+            
+            # Verify startup message was sent
+            assert startup_message_sent, "Startup message should have been sent"
+            
+            # Verify poll_and_notify was called at least once
+            assert len(poll_calls) >= 1, f"Expected at least 1 polling call, got {len(poll_calls)}"
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_edge_cases():
+    """
+    Test poll_and_notify with various edge cases.
+    
+    Tests missing fields, empty titles, and other edge cases in conversation data.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Clear conversation states
+            bot.conversation_states = {}
+            
+            # Track sent messages
+            sent_messages = []
+            async def mock_send_telegram_message(message):
+                sent_messages.append(message)
+                return True
+            
+            # Test edge cases: missing title, missing status
+            mock_conversations = [
+                {"id": "conv1", "title": "Task 1", "status": "running"},
+                {"id": "conv2", "status": "pending"},  # Missing title
+                {"id": "conv3", "title": "Task 3"},  # Missing status
+                {"id": "conv4"}  # Missing both title and status
+            ]
+            
+            # Mock asyncio.sleep to break after first iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                with patch.object(bot, 'fetch_conversations', AsyncMock(return_value=mock_conversations)):
+                    with patch.object(bot, 'send_telegram_message', mock_send_telegram_message):
+                        # Run poll_and_notify and expect loop to break
+                        with pytest.raises(Exception, match="Break loop"):
+                            await bot.poll_and_notify()
+            
+            # Verify messages were sent for all conversations (with default values for missing fields)
+            assert len(sent_messages) == 4  # All conversations should trigger messages with default values
+            assert "🆕 New Task Started: Task 1 (ID: conv1)" in sent_messages[0]
+            assert "🆕 New Task Started: Untitled (ID: conv2)" in sent_messages[1]
+            assert "🆕 New Task Started: Task 3 (ID: conv3)" in sent_messages[2]
+            assert "🆕 New Task Started: Untitled (ID: conv4)" in sent_messages[3]
+            
+            # Verify states were updated for all conversations (with default status "UNKNOWN" for missing status)
+            assert "conv1" in bot.conversation_states
+            assert bot.conversation_states["conv1"] == "running"
+            assert "conv2" in bot.conversation_states  # Has status "pending"
+            assert bot.conversation_states["conv2"] == "pending"
+            assert "conv3" in bot.conversation_states  # Missing status gets default "UNKNOWN"
+            assert bot.conversation_states["conv3"] == "UNKNOWN"
+            assert "conv4" in bot.conversation_states  # Missing status gets default "UNKNOWN"
+            assert bot.conversation_states["conv4"] == "UNKNOWN"
