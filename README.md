@@ -1,5 +1,7 @@
 # OpenHands Monitor Bot
 
+A Telegram bot for monitoring OpenHands platform tasks and sending real-time notifications about task status changes.
+
 ## Project Description
 
 The OpenHands Monitor Bot is a Telegram bot designed to monitor OpenHands platform tasks and send real-time notifications about task status changes. It continuously polls the OpenHands API for conversation/task updates and alerts users about:
