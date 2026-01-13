@@ -132,8 +132,8 @@ async def test_send_telegram_message_success():
                 text=test_message
             )
             
-            # Verify function returns None (no return value)
-            assert result is None
+            # Verify function returns True on success
+            assert result is True
 
 
 @pytest.mark.asyncio
