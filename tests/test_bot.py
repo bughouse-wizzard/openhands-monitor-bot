@@ -1429,3 +1429,100 @@ async def test_main_edge_cases():
                         
                         # Verify poll_and_notify was called (bot started successfully)
                         assert poll_count > 0
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_new_conversation():
+    """
+    Test poll_and_notify when a new conversation is detected.
+    
+    This test simulates a scenario where a new conversation appears.
+    It mocks fetch_conversations to return a new conversation and
+    verifies that send_telegram_message is called with the correct message.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Clear conversation states
+            bot.conversation_states = {}
+            
+            # Mock conversations data with a new conversation
+            mock_conversations = [
+                {"id": "conv1", "title": "New Task", "status": "running"}
+            ]
+            
+            # Track calls to send_telegram_message
+            sent_messages = []
+            async def mock_send_telegram_message(message):
+                sent_messages.append(message)
+                return True
+            
+            # Mock asyncio.sleep to break the loop after first iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                with patch.object(bot, 'fetch_conversations', AsyncMock(return_value=mock_conversations)):
+                    with patch.object(bot, 'send_telegram_message', mock_send_telegram_message):
+                        # Run poll_and_notify and expect loop to break
+                        with pytest.raises(Exception, match="Break loop"):
+                            await bot.poll_and_notify()
+                        
+                        # Verify message was sent for new conversation
+                        assert len(sent_messages) == 1
+                        assert "🆕 New Task Started: New Task (ID: conv1)" in sent_messages[0]
+                        
+                        # Verify state was updated
+                        assert bot.conversation_states == {"conv1": "running"}
+
+
+@pytest.mark.asyncio
+async def test_poll_and_notify_no_new_conversation():
+    """
+    Test poll_and_notify when no new conversations are detected.
+    
+    This test simulates a scenario where no new conversations appear.
+    It mocks fetch_conversations to return existing conversations and
+    verifies that send_telegram_message is not called.
+    """
+    # Remove module from cache if already imported
+    if 'bot' in sys.modules:
+        del sys.modules['bot']
+    
+    with patch.dict('os.environ', {'TELEGRAM_TOKEN': 'test', 'CHAT_ID': 'test'}):
+        with patch('telegram.Bot'):
+            import bot
+            
+            # Set up initial conversation states
+            bot.conversation_states = {
+                "conv1": "running",
+                "conv2": "pending"
+            }
+            
+            # Mock conversations data (same as initial states)
+            mock_conversations = [
+                {"id": "conv1", "title": "Task 1", "status": "running"},
+                {"id": "conv2", "title": "Task 2", "status": "pending"}
+            ]
+            
+            # Track calls to send_telegram_message
+            sent_messages = []
+            async def mock_send_telegram_message(message):
+                sent_messages.append(message)
+                return True
+            
+            # Mock asyncio.sleep to break the loop after first iteration
+            with patch('asyncio.sleep', side_effect=[None, Exception("Break loop")]):
+                with patch.object(bot, 'fetch_conversations', AsyncMock(return_value=mock_conversations)):
+                    with patch.object(bot, 'send_telegram_message', mock_send_telegram_message):
+                        # Run poll_and_notify and expect loop to break
+                        with pytest.raises(Exception, match="Break loop"):
+                            await bot.poll_and_notify()
+                        
+                        # Verify no messages were sent (no new conversations)
+                        assert len(sent_messages) == 0
+                        
+                        # Verify states remain unchanged
+                        assert bot.conversation_states == {"conv1": "running", "conv2": "pending"}
