@@ -1,5 +1,29 @@
 # OpenHands Monitor Bot
 
+## 🚀 Быстрый старт
+
+1. **Клонируйте репозиторий:**
+   ```bash
+   git clone https://github.com/bughouse-wizzard/openhands-monitor-bot.git
+   cd openhands-monitor-bot
+   ```
+
+2. **Установите зависимости:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Настройте переменные окружения:**
+   ```bash
+   cp .env.example .env
+   # Отредактируйте .env файл с вашими настройками
+   ```
+
+4. **Запустите бота:**
+   ```bash
+   python bot.py
+   ```
+
 ## Описание проекта
 
 OpenHands Monitor Bot — это Telegram-бот, предназначенный для мониторинга задач на платформе OpenHands и отправки уведомлений в реальном времени об изменениях статуса задач. Он непрерывно опрашивает API OpenHands для получения обновлений о беседах/задачах и оповещает пользователей о:
