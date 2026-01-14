@@ -56,8 +56,8 @@ def get_definitions(word: str, custom_dict: dict = None) -> list:
             the word is not found in the dictionary.
 
     Raises:
-        None: This function handles all errors internally and returns
-            appropriate default values.
+        AttributeError: If custom_dict is provided but is not a dictionary
+            (does not have a .get() method).
 
     Examples:
         >>> get_definitions("apple")
