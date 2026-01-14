@@ -7,6 +7,7 @@
 - Обработку ошибок
 - Unicode и специальные символы
 - Пользовательские словари
+- Примеры из документации (docstring)
 
 Покрытие тестами: 100% (все строки кода в map_maker.py покрыты тестами)
 Всего тестов: 46, все проходят успешно.
@@ -864,6 +865,33 @@ class TestGetDefinitions:
         
         result = get_definitions("normal", custom_dict)
         assert result == ["Обычное определение"]
+    
+    def test_docstring_examples(self):
+        """Тест примеров из docstring функции get_definitions."""
+        # Пример 1: Базовый пример
+        result = get_definitions("apple")
+        expected = [
+            "A fruit that grows on trees",
+            "A technology company founded by Steve Jobs"
+        ]
+        assert result == expected
+        
+        # Пример 2: Пользовательский словарь
+        custom_dict = {"python": ["My favorite programming language"]}
+        result = get_definitions("python", custom_dict)
+        assert result == ["My favorite programming language"]
+        
+        # Пример 3: Слово не найдено
+        result = get_definitions("nonexistent")
+        assert result == []
+        
+        # Пример 4: Нормализация ввода
+        result = get_definitions("  APPLE  ")  # Normalized input
+        expected = [
+            "A fruit that grows on trees",
+            "A technology company founded by Steve Jobs"
+        ]
+        assert result == expected
 
 
 if __name__ == "__main__":
